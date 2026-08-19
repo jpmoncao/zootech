@@ -1,0 +1,9 @@
+{
+  "ai": "cursor-agent",
+  "ai_skills": true,
+  "feature_numbering": "sequential",
+  "here": false,
+  "integration": "cursor-agent",
+  "script": "py",
+  "speckit_version": "0.16.5"
+}
