@@ -1,0 +1,38 @@
+@import "tailwindcss";
+@source "../../../../packages/ui/src/**/*.{ts,tsx}";
+
+:root {
+  --background: oklch(0.985 0.004 247);
+  --foreground: oklch(0.205 0.03 260);
+  --primary: oklch(0.32 0.05 260);
+  --primary-foreground: oklch(0.985 0.004 247);
+  --secondary: oklch(0.94 0.01 247);
+  --secondary-foreground: oklch(0.25 0.03 260);
+  --accent: oklch(0.94 0.01 247);
+  --accent-foreground: oklch(0.25 0.03 260);
+  --border: oklch(0.82 0.015 247);
+  --input: oklch(0.82 0.015 247);
+  --ring: oklch(0.4 0.05 260);
+  --radius: 0.5rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-md: var(--radius);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}

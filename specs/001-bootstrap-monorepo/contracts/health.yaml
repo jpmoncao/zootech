@@ -1,0 +1,51 @@
+openapi: 3.1.0
+info:
+  title: ZooTech API — Bootstrap
+  version: 0.1.0
+  description: >
+    Contrato HTTP da fundação. Um único recurso: verificação de disponibilidade.
+    Tipos canônicos vivem em @zootech/contracts (HealthResponse); este arquivo
+    documenta a superfície HTTP.
+servers:
+  - url: http://127.0.0.1:3333
+    description: API local (default do bootstrap)
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Verificação de disponibilidade
+      description: >
+        Retorna 200 com HealthResponse quando o processo HTTP está no ar.
+        Não consulta banco nem domínio de produto.
+      tags:
+        - Availability
+      responses:
+        '200':
+          description: Serviço disponível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              examples:
+                ok:
+                  value:
+                    status: ok
+                    service: api
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+        - service
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+        service:
+          type: string
+          minLength: 1
+          examples:
+            - api

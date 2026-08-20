@@ -1,0 +1,21 @@
+{
+  "name": "@zootech/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@zootech/contracts": "workspace:*",
+    "fastify": "^5.4.0"
+  },
+  "devDependencies": {
+    "@zootech/config": "workspace:*",
+    "@types/node": "^22.17.0",
+    "tsx": "^4.20.3",
+    "typescript": "^5.9.2"
+  }
+}

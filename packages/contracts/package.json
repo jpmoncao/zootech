@@ -1,0 +1,16 @@
+{
+  "name": "@zootech/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@zootech/config": "workspace:*",
+    "typescript": "^5.9.2"
+  }
+}
