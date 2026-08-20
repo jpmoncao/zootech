@@ -5,12 +5,16 @@ import { RefreshButton } from "./refresh-button";
 
 export default async function Page() {
   const model = await getAvailability();
+  const unavailable = model.availability === "unavailable";
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-6 px-4 py-6">
-      <h1 className="text-2xl font-semibold tracking-tight">{model.productName}</h1>
+    <div className="flex max-w-md flex-col gap-6">
       <p
-        className="flex min-h-11 items-center gap-2 text-base"
+        className={
+          unavailable
+            ? "flex min-h-11 items-center gap-2 text-base text-foreground"
+            : "flex min-h-11 items-center gap-2 text-base text-primary"
+        }
         role="status"
         aria-live="polite"
       >
@@ -18,6 +22,6 @@ export default async function Page() {
         {model.availabilityLabel}
       </p>
       <RefreshButton />
-    </main>
+    </div>
   );
 }
