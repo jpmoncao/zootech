@@ -2,7 +2,7 @@
 
 ## What This Project Is
 
-ZooTech é o sistema de gestão do Centro de Controle de Zoonoses (CCZ). O repositório está no estágio de definição: não há aplicação, monorepo nem banco criados. A direção de produto e a stack abaixo foram confirmadas em 2026-09-23.
+ZooTech é o sistema de gestão do Centro de Controle de Zoonoses (CCZ). O monorepo existe com Next.js sem tela e NestJS só com `GET /health`. O domínio do MVP ainda não foi implementado. A stack foi confirmada em 2026-09-23.
 
 ## Who It Serves
 

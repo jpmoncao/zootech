@@ -6,6 +6,10 @@
 
 Centro de Controle de Zoonoses. Instituição que o ZooTech gere.
 
+### Identidade visual
+
+Direção visual do ZooTech, ainda não definida. Nenhuma tela, layout, componente ou estilo entra no código antes dela. O bootstrap do monorepo deixa o front sem interface por causa disso.
+
 ### ADM
 
 Veterinário administrador. No painel, executa todas as funcionalidades do sistema, cadastra e gere usuários e funcionários, e consulta a auditoria. Não há classe própria: o acesso fica em `Usuario.perfilAcesso`. Os valores desse campo ainda não foram enumerados.

@@ -2,17 +2,16 @@
 
 ## System Summary
 
-Monorepo ainda não criado. A forma alvo é um app Next.js, uma API NestJS e um Postgres, orquestrados por pnpm e Turborepo. O esquema de domínio abaixo é o diagrama de classes enviado em 2026-09-23. Não há código que o implemente.
+Monorepo pnpm e Turborepo com `apps/web` (Next.js, sem tela) e `apps/api` (NestJS, só `GET /health`). Postgres local está no `compose.yaml`, sem esquema. O diagrama de classes de 2026-09-23 continua sem código de domínio.
 
 ## Main Modules
 
-Nenhum módulo existe no repositório. Previstos, ainda sem pastas:
+- `apps/web`: pacote Next.js sem tela, layout vazio e página que não renderiza conteúdo.
+- `apps/api`: NestJS com `GET /health`. Escuta em `0.0.0.0` e `PORT` (padrão 3001). Não abre conexão com o banco.
+- `compose.yaml`: Postgres 17 local. Sem migração.
+- `tsconfig.base.json` e `eslint.config.mjs`: config compartilhada.
 
-- `apps/web`: painel Next.js.
-- `apps/api`: API NestJS.
-- Postgres: persistência do domínio.
-
-Pacotes compartilhados (contratos, config) ainda não foram decididos.
+Pacote de contratos ainda não existe.
 
 ## Data Flow
 
@@ -180,11 +179,11 @@ O painel do veterinário ADM reúne todas as funcionalidades do sistema, mais a 
 
 ## Testing Strategy
 
-Nenhuma. Não há código nem runner de testes.
+Jest em `apps/api` cobre `GET /health`. O front não tem testes.
 
 ## Local Development
 
-Nada para instalar ou subir. O monorepo ainda não existe.
+Node.js 22 ou superior e pnpm 11. `pnpm install` na raiz. `pnpm dev:api` sobe a API. `docker compose up -d` sobe o Postgres. O front não tem tela para abrir.
 
 ## Deployment
 

@@ -2,18 +2,22 @@
 
 ## Current Focus
 
-Domínio do MVP fechado em 2026-09-23: painel ADM com o sistema inteiro, baia obrigatória e tutor só na adoção. Próximo passo é a spec, ainda sem código.
+Bootstrap do monorepo concluído em 2026-09-23. O front não tem tela. A API responde só em `GET /health`. O domínio do MVP continua sem código de produto.
 
 ## Active Tasks
 
-- Escrever a spec do MVP.
-  - Status: pronta para começar
+- Bootstrap em `.ai-context/tasks/bootstrap-monorepo.md`.
+  - Status: concluído
+  - Notes: sem telas, sem ORM, sem domínio; Postgres só como Compose e `DATABASE_URL`
+- Escrever a spec do MVP (painel ADM).
+  - Status: bloqueada pela identidade visual para qualquer tela
   - Notes: o painel ADM inclui UC02–UC10, gestão de usuários/funcionários e auditoria
-- Criar o monorepo (pnpm, Turborepo, Next.js, NestJS, Postgres).
-  - Status: ainda não autorizado como implementação
 
 ## Recent Changes
 
+- 2026-09-23
+  - Change: Monorepo criado com `apps/web` sem tela, `apps/api` só com `GET /health` e Postgres local sem esquema.
+  - Reason: Bootstrap autorizado depois da spec e das tarefas.
 - 2026-09-23
   - Change: Painel ADM cobre todas as funcionalidades, mais usuários/funcionários e auditoria. Animal sempre em uma baia e pode ser transferido. Tutor só depois da adoção. Includes confirmados: UC06 e UC08 incluem UC01.
   - Reason: Respostas do autor sobre o corte do painel e o modelo.
@@ -29,9 +33,8 @@ Domínio do MVP fechado em 2026-09-23: painel ADM com o sistema inteiro, baia ob
 
 ## Next Steps
 
-1. Escrever a spec do MVP com `product-spec`.
-2. Planejar o monorepo e a API a partir dessa spec.
-3. Implementar só depois do plano.
+1. Especificar a identidade visual antes de qualquer tela.
+2. Escrever a spec do painel ADM depois dessa identidade.
 
 ## Things To Remember
 

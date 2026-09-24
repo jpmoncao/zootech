@@ -72,6 +72,18 @@
 
 **Consequences:** Tutor obrigatório e a ausência de baia foram corrigidos na decisão de ocupação e adoção. Continuam em aberto: `idTutor` além da herança de `Usuario`, e a cardinalidade 0..1 de castração e adoção. Includes do diagrama de casos de uso: só UC06 e UC08 incluem UC01.
 
+## 2026-09-23 — Nenhuma tela antes da identidade visual
+
+**Status:** Accepted
+
+**Context:** O bootstrap do monorepo é o próximo código, e o front ainda não tem direção visual.
+
+**Decision:** O front do bootstrap não tem tela, layout, componente, estilo nem cópia de produto. A identidade visual será definida antes de qualquer interface. A API desse marco expõe somente `GET /health`.
+
+**Rationale:** Confirmado pelo autor. A interface espera a identidade visual.
+
+**Consequences:** A spec do bootstrap está em `.ai-context/specs/bootstrap-monorepo.md`. Biblioteca de UI, ORM e domínio ficam fora desse marco. A spec do painel ADM não começa pelas telas.
+
 ## 2026-09-23 — Reset onto the agentic workflow
 
 **Status:** Accepted
