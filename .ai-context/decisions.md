@@ -84,6 +84,30 @@
 
 **Consequences:** A spec do bootstrap está em `.ai-context/specs/bootstrap-monorepo.md`. Biblioteca de UI, ORM e domínio ficam fora desse marco. A spec do painel ADM não começa pelas telas.
 
+## 2026-09-23 — O guia visual do CCZ é a referência da identidade
+
+**Status:** Accepted
+
+**Context:** A identidade visual ainda não existia, e o autor enviou o guia HTML gerado para o protótipo do CCZ.
+
+**Decision:** Esse guia é vinculante. A direção recomendada (saúde pública, verde-petróleo, âmbar de vacina, Bricolage Grotesque, Figtree, IBM Plex Mono) vale. As alternativas gov.br e ardósia/menta não foram escolhidas. O nome visível é só ZooTech. Não há brasão; o escudo provisório não vira brasão municipal.
+
+**Rationale:** Confirmado pelo autor em 2026-09-23: a identidade serve a equipe do CCZ, o ADM é o primeiro usuário entregue, o nome na interface é ZooTech, e não se inventa brasão.
+
+**Consequences:** `PRODUCT.md` guarda o contexto. `DESIGN.md` registra a direção construída no login e na casca do painel. O âmbar não é cor geral de botão: fica no escudo provisório.
+
+## 2026-09-24 — Interface do web usa shadcn
+
+**Status:** Accepted
+
+**Context:** O front já tem identidade visual e controles desenhados à mão no login e na casca.
+
+**Decision:** A interface em `apps/web` usa componentes shadcn/ui, tematizados com `DESIGN.md`. A regra está em `.cursor/rules/shadcn-components.mdc`. A API não usa essa biblioteca.
+
+**Rationale:** Confirmado pelo autor.
+
+**Consequences:** Peça nova de interface entra por `src/components/ui`. O tema padrão do shadcn não substitui petróleo, Figtree nem os raios já registrados. Login e casca usam esses componentes desde 2026-09-24.
+
 ## 2026-09-23 — Reset onto the agentic workflow
 
 **Status:** Accepted

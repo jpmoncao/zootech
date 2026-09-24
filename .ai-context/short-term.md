@@ -2,7 +2,7 @@
 
 ## Current Focus
 
-Bootstrap do monorepo concluído em 2026-09-23. O front não tem tela. A API responde só em `GET /health`. O domínio do MVP continua sem código de produto.
+Bootstrap do monorepo concluído em 2026-09-23. A identidade visual está em `DESIGN.md`. O front tem login e a casca do painel. A API responde só em `GET /health`. O domínio do MVP continua sem cadastro de animais.
 
 ## Active Tasks
 
@@ -15,6 +15,9 @@ Bootstrap do monorepo concluído em 2026-09-23. O front não tem tela. A API res
 
 ## Recent Changes
 
+- 2026-09-23
+  - Change: Login e casca do painel no front, com a identidade do guia. Sem cadastro de animais. Senha ainda não conferida pela API.
+  - Reason: A identidade precisava existir antes das telas de domínio.
 - 2026-09-23
   - Change: Monorepo criado com `apps/web` sem tela, `apps/api` só com `GET /health` e Postgres local sem esquema.
   - Reason: Bootstrap autorizado depois da spec e das tarefas.
@@ -33,11 +36,12 @@ Bootstrap do monorepo concluído em 2026-09-23. O front não tem tela. A API res
 
 ## Next Steps
 
-1. Especificar a identidade visual antes de qualquer tela.
-2. Escrever a spec do painel ADM depois dessa identidade.
+1. Escrever a spec do painel ADM em cima da identidade já registrada.
+2. Ligar o login a uma sessão real na API. Hoje a senha não é conferida e a sessão fica no navegador.
 
 ## Things To Remember
 
 - Não restaurar o bootstrap apagado.
 - O veterinário ADM enxerga todas as funcionalidades. Funcionário e veterinário continuam com os casos de uso do diagrama.
+- Interface em `apps/web` usa shadcn, no tema de `DESIGN.md`. Login e casca já usam esses componentes.
 - Persistência é Postgres. Não há fila, storage externo nem serviço de terceiros neste momento.

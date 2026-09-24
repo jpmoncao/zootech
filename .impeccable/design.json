@@ -1,0 +1,341 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-24T03:00:00.000Z",
+  "title": "Design System: ZooTech",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Petróleo",
+        "canonical": "#135E63",
+        "tonalRamp": ["#0A2E31", "#0C4549", "#135E63", "#1A7A80", "#3A9A9F", "#6BB8BC", "#A8D5D7", "#E3F0EF"]
+      },
+      "primary-deep": {
+        "role": "primary",
+        "displayName": "Petróleo Profundo",
+        "canonical": "#0C4549",
+        "tonalRamp": ["#061C1E", "#0A2E31", "#0C4549", "#135E63", "#2A7A7F", "#5AA3A7", "#9BC9CC", "#D5E8E8"]
+      },
+      "primary-soft": {
+        "role": "primary",
+        "displayName": "Petróleo Suave",
+        "canonical": "#E3F0EF",
+        "tonalRamp": ["#0C4549", "#135E63", "#3A9A9F", "#6BB8BC", "#A8D5D7", "#C5E4E3", "#E3F0EF", "#F4FAF9"]
+      },
+      "accent-amber": {
+        "role": "tertiary",
+        "displayName": "Âmbar de Vacina",
+        "canonical": "#E8A317",
+        "tonalRamp": ["#5C3F06", "#8A5F0A", "#B87E0F", "#E8A317", "#F0B94A", "#F5CC7A", "#F9E0B0", "#FDF3DC"]
+      },
+      "accent-amber-soft": {
+        "role": "tertiary",
+        "displayName": "Âmbar Suave",
+        "canonical": "#FDF3DC",
+        "tonalRamp": ["#8A5F0A", "#B87E0F", "#E8A317", "#F0B94A", "#F5CC7A", "#F9E0B0", "#FDF3DC", "#FEF9EF"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Tinta",
+        "canonical": "#17211F",
+        "tonalRamp": ["#0B100F", "#17211F", "#2A3835", "#3F504C", "#5B6B68", "#8A9A96", "#C5CECB", "#F4F7F6"]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted",
+        "canonical": "#5B6B68",
+        "tonalRamp": ["#17211F", "#2A3835", "#3F504C", "#5B6B68", "#7A8A86", "#A3AFAC", "#D0D8D6", "#F4F7F6"]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Linha",
+        "canonical": "#D9E1DF",
+        "tonalRamp": ["#5B6B68", "#8A9A96", "#A8B5B2", "#C0CBC8", "#D9E1DF", "#E8EEEC", "#F4F7F6", "#FFFFFF"]
+      },
+      "mist": {
+        "role": "neutral",
+        "displayName": "Névoa",
+        "canonical": "#F4F7F6",
+        "tonalRamp": ["#5B6B68", "#8A9A96", "#B7C9C6", "#D9E1DF", "#E8EEEC", "#F4F7F6", "#FAFBFA", "#FFFFFF"]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Superfície",
+        "canonical": "#FFFFFF",
+        "tonalRamp": ["#D9E1DF", "#E8EEEC", "#F4F7F6", "#FAFBFA", "#FFFFFF", "#FFFFFF", "#FFFFFF", "#FFFFFF"]
+      },
+      "on-dark": {
+        "role": "neutral",
+        "displayName": "Sobre Escuro",
+        "canonical": "#E3F0EF",
+        "tonalRamp": ["#0C4549", "#135E63", "#3A9A9F", "#6BB8BC", "#A9CBC7", "#C5E4E3", "#E3F0EF", "#F4FAF9"]
+      },
+      "on-dark-soft": {
+        "role": "neutral",
+        "displayName": "Sobre Escuro Suave",
+        "canonical": "#A9CBC7",
+        "tonalRamp": ["#0C4549", "#135E63", "#3A9A9F", "#6BB8BC", "#8FB8B3", "#A9CBC7", "#C5E4E3", "#E3F0EF"]
+      },
+      "ok": {
+        "role": "neutral",
+        "displayName": "Ok",
+        "canonical": "#2F8A4E",
+        "tonalRamp": ["#143B22", "#1D5C34", "#2F8A4E", "#45A866", "#6FBF88", "#9FD5B0", "#C8E9D2", "#E4F3E8"]
+      },
+      "ok-soft": {
+        "role": "neutral",
+        "displayName": "Ok Suave",
+        "canonical": "#E4F3E8",
+        "tonalRamp": ["#1D5C34", "#2F8A4E", "#45A866", "#6FBF88", "#9FD5B0", "#C8E9D2", "#E4F3E8", "#F3FAF5"]
+      },
+      "warn": {
+        "role": "neutral",
+        "displayName": "Aviso",
+        "canonical": "#A35F00",
+        "tonalRamp": ["#3D2400", "#6B3F00", "#A35F00", "#C7781A", "#E09A45", "#F0C07A", "#F7DCB0", "#FCEFD9"]
+      },
+      "warn-soft": {
+        "role": "neutral",
+        "displayName": "Aviso Suave",
+        "canonical": "#FCEFD9",
+        "tonalRamp": ["#6B3F00", "#A35F00", "#C7781A", "#E09A45", "#F0C07A", "#F7DCB0", "#FCEFD9", "#FEF7EC"]
+      },
+      "crit": {
+        "role": "neutral",
+        "displayName": "Crítico",
+        "canonical": "#B93A2B",
+        "tonalRamp": ["#4A1711", "#7A261C", "#B93A2B", "#D15545", "#E07E72", "#EDB0A8", "#F5D4CF", "#FBE6E3"]
+      },
+      "crit-soft": {
+        "role": "neutral",
+        "displayName": "Crítico Suave",
+        "canonical": "#FBE6E3",
+        "tonalRamp": ["#7A261C", "#B93A2B", "#D15545", "#E07E72", "#EDB0A8", "#F5D4CF", "#FBE6E3", "#FEF5F4"]
+      },
+      "info": {
+        "role": "neutral",
+        "displayName": "Info",
+        "canonical": "#2E6AA3",
+        "tonalRamp": ["#122B42", "#1D4A75", "#2E6AA3", "#4584BC", "#6BA0CE", "#9AC0E0", "#C6D9EC", "#E3EDF7"]
+      },
+      "info-soft": {
+        "role": "neutral",
+        "displayName": "Info Suave",
+        "canonical": "#E3EDF7",
+        "tonalRamp": ["#1D4A75", "#2E6AA3", "#4584BC", "#6BA0CE", "#9AC0E0", "#C6D9EC", "#E3EDF7", "#F2F7FB"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Manchete Bricolage na parede do login (38px / 28px mobile)."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Títulos de formulário e h1 do conteúdo do painel (28px)."
+      },
+      "title": {
+        "displayName": "Title / Marca",
+        "purpose": "Palavra ZooTech na marca (15–17px)."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Interface Figtree; 16px no login, 14px no shell."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Labels de campo, passos, grupos de nav, crumbs (13px/600)."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "CPF, matrícula, CRMV e identificador de sessão."
+      }
+    },
+    "shadows": [
+      {
+        "name": "panel",
+        "value": "0 10px 28px rgba(12, 69, 73, 0.08)",
+        "purpose": "Elevação suave em containers .panel do miolo."
+      },
+      {
+        "name": "focus",
+        "value": "0 0 0 3px rgba(19, 94, 99, 0.22)",
+        "purpose": "Anel de foco em campos e escolhas ativas."
+      },
+      {
+        "name": "focus-error",
+        "value": "0 0 0 3px rgba(185, 58, 43, 0.15)",
+        "purpose": "Anel de erro em .control.error."
+      },
+      {
+        "name": "drawer-scrim",
+        "value": "rgba(12, 21, 20, 0.45)",
+        "purpose": "Backdrop do menu drawer em ≤760px."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-expo",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "View transitions da parede/marca e abertura do drawer."
+      },
+      {
+        "name": "duration-wall",
+        "value": "240ms",
+        "purpose": "Transição de grupo zoot-wall / zoot-mark."
+      },
+      {
+        "name": "duration-drawer",
+        "value": "180ms",
+        "purpose": "Transform do menu lateral mobile."
+      }
+    ],
+    "breakpoints": [
+      { "name": "shell-rail", "value": "1023px" },
+      { "name": "mobile", "value": "760px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ação principal — Entrar, Continuar, Confirmar posto.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Entrar</button>",
+      "css": ".ds-btn-primary { min-height: 44px; border-radius: 8px; border: 1px solid transparent; padding: 10px 16px; font: 600 15px/1 var(--body, Figtree, sans-serif); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; background: var(--primary, #135E63); color: #fff; } .ds-btn-primary:hover:not(:disabled) { background: var(--primary-700, #0C4549); } .ds-btn-primary:focus-visible { outline: 2px solid var(--primary, #135E63); outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Ação secundária — Solicitar acesso, Voltar, Sair.",
+      "html": "<button class=\"ds-btn-secondary\" type=\"button\">Solicitar acesso</button>",
+      "css": ".ds-btn-secondary { min-height: 44px; border-radius: 8px; border: 1px solid var(--line, #D9E1DF); padding: 10px 16px; font: 600 15px/1 var(--body, Figtree, sans-serif); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; background: var(--surface, #fff); color: var(--ink, #17211F); } .ds-btn-secondary:hover:not(:disabled) { background: var(--primary-50, #E3F0EF); } .ds-btn-secondary:focus-visible { outline: 2px solid var(--primary, #135E63); outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Ação textual inline — Mostrar/Ocultar senha.",
+      "html": "<button class=\"ds-btn-ghost\" type=\"button\">Mostrar</button>",
+      "css": ".ds-btn-ghost { border: 0; background: none; color: var(--primary, #135E63); font: 600 13px/1 var(--body, Figtree, sans-serif); min-height: 40px; padding: 8px; cursor: pointer; } .ds-btn-ghost:hover { color: var(--primary-700, #0C4549); } .ds-btn-ghost:focus-visible { outline: 2px solid var(--primary, #135E63); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input-control",
+      "description": "Campo alto com foco petróleo; variante mono para CPF/matrícula.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">CPF ou matrícula</span><div class=\"ds-control\"><input class=\"ds-control-input ds-mono\" type=\"text\" value=\"123.456.789-00\" /></div></label>",
+      "css": ".ds-field { display: flex; flex-direction: column; gap: 6px; font-family: var(--body, Figtree, sans-serif); color: var(--ink, #17211F); } .ds-field-label { font-size: 13px; font-weight: 600; } .ds-control { min-height: 52px; border: 1px solid var(--line, #D9E1DF); border-radius: 6px; background: var(--surface, #fff); padding: 8px 12px; display: flex; align-items: center; } .ds-control:focus-within { border-color: var(--primary, #135E63); box-shadow: 0 0 0 3px rgba(19, 94, 99, 0.22); } .ds-control-input { flex: 1; border: 0; padding: 0; background: transparent; color: var(--ink, #17211F); font: 15px/1.4 var(--body, Figtree, sans-serif); outline: none; width: 100%; } .ds-mono { font-family: var(--mono, \"IBM Plex Mono\", monospace); font-size: 14px; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Container de interação no miolo — confirmar posto.",
+      "html": "<div class=\"ds-panel\"><p class=\"ds-panel-legend\">Onde você está agora</p><p class=\"ds-panel-hint\">O posto fica guardado com a sessão.</p><button class=\"ds-btn-primary\" type=\"button\">Confirmar posto</button></div>",
+      "css": ".ds-panel { background: var(--surface, #fff); border: 1px solid var(--line, #D9E1DF); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 10px 28px rgba(12, 69, 73, 0.08); font-family: var(--body, Figtree, sans-serif); color: var(--ink, #17211F); max-width: 420px; } .ds-panel-legend { margin: 0; font-size: 13px; font-weight: 600; } .ds-panel-hint { margin: 0; font-size: 13px; color: var(--muted, #5B6B68); } .ds-btn-primary { align-self: flex-end; min-height: 44px; border-radius: 8px; border: 0; padding: 10px 16px; font: 600 15px/1 var(--body, Figtree, sans-serif); background: var(--primary, #135E63); color: #fff; cursor: pointer; } .ds-btn-primary:hover { background: var(--primary-700, #0C4549); }"
+    },
+    {
+      "name": "Side Nav Link",
+      "kind": "nav",
+      "refersTo": "nav-link",
+      "description": "Item do menu na parede petróleo; current com véu branco.",
+      "html": "<nav class=\"ds-side\" aria-label=\"Seções\"><a class=\"ds-nav-link\" href=\"#\">Animais</a><a class=\"ds-nav-link ds-nav-link-current\" href=\"#\" aria-current=\"page\">Painel</a></nav>",
+      "css": ".ds-side { background: var(--primary-700, #0C4549); padding: 18px 12px; display: flex; flex-direction: column; gap: 4px; width: 216px; font-family: var(--body, Figtree, sans-serif); } .ds-nav-link { min-height: 40px; padding: 8px 12px; border-radius: 8px; color: var(--on-dark, #E3F0EF); text-decoration: none; font-weight: 500; font-size: 14px; display: flex; align-items: center; } .ds-nav-link:hover { color: #fff; } .ds-nav-link:focus-visible { outline: 2px solid var(--primary, #135E63); outline-offset: 2px; } .ds-nav-link-current { background: rgba(255, 255, 255, 0.12); color: #fff; }"
+    },
+    {
+      "name": "Role Choice",
+      "kind": "chip",
+      "refersTo": "choice",
+      "description": "Escolha de função no pedido de acesso.",
+      "html": "<div class=\"ds-choice-grid\" role=\"radiogroup\"><button class=\"ds-choice\" type=\"button\" role=\"radio\" aria-checked=\"false\">Recepção<small>Balcão de atendimento</small></button><button class=\"ds-choice ds-choice-selected\" type=\"button\" role=\"radio\" aria-checked=\"true\">Agente de zoonoses<small>Manejo e recolhimento</small></button></div>",
+      "css": ".ds-choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-width: 420px; } .ds-choice { min-height: 64px; text-align: left; border: 1px solid var(--line, #D9E1DF); background: var(--surface, #fff); border-radius: 8px; padding: 10px 12px; cursor: pointer; color: var(--ink, #17211F); font: 600 14px/1.3 var(--body, Figtree, sans-serif); } .ds-choice small { display: block; font-weight: 500; color: var(--muted, #5B6B68); } .ds-choice:hover { border-color: var(--primary, #135E63); } .ds-choice:focus-visible { outline: 2px solid var(--primary, #135E63); outline-offset: 2px; } .ds-choice-selected { border-color: var(--primary, #135E63); background: var(--primary-50, #E3F0EF); box-shadow: 0 0 0 3px rgba(19, 94, 99, 0.22); }"
+    },
+    {
+      "name": "Posto Segment",
+      "kind": "chip",
+      "refersTo": "seg-selected",
+      "description": "Segmento do posto de trabalho no painel.",
+      "html": "<div class=\"ds-seg\" role=\"radiogroup\"><button class=\"ds-seg-btn\" type=\"button\" role=\"radio\" aria-checked=\"false\">Balcão</button><button class=\"ds-seg-btn ds-seg-selected\" type=\"button\" role=\"radio\" aria-checked=\"true\">Canil</button><button class=\"ds-seg-btn\" type=\"button\" role=\"radio\" aria-checked=\"false\">Gatil</button></div>",
+      "css": ".ds-seg { display: flex; flex-wrap: wrap; gap: 8px; } .ds-seg-btn { min-height: 40px; border-radius: 8px; border: 1px solid var(--line, #D9E1DF); background: var(--surface, #fff); padding: 8px 14px; font: 600 14px/1 var(--body, Figtree, sans-serif); cursor: pointer; color: var(--ink, #17211F); } .ds-seg-btn:hover { border-color: var(--primary, #135E63); } .ds-seg-btn:focus-visible { outline: 2px solid var(--primary, #135E63); outline-offset: 2px; } .ds-seg-selected { background: var(--primary-50, #E3F0EF); border-color: var(--primary, #135E63); color: var(--primary-700, #0C4549); }"
+    },
+    {
+      "name": "Provisional Mark",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Escudo âmbar provisório — inline SVG, sem brasão municipal.",
+      "html": "<div class=\"ds-brand\"><svg class=\"ds-mark\" width=\"36\" height=\"41\" viewBox=\"0 0 30 34\" aria-hidden=\"true\"><path d=\"M15 1 L28 6 V17 C28 25 22 30.5 15 33 C8 30.5 2 25 2 17 V6 Z\" fill=\"#E8A317\"/><circle cx=\"15\" cy=\"20\" r=\"4.2\" fill=\"#0C4549\"/><circle cx=\"9.5\" cy=\"13.5\" r=\"2.2\" fill=\"#0C4549\"/><circle cx=\"13\" cy=\"10.5\" r=\"2.2\" fill=\"#0C4549\"/><circle cx=\"17\" cy=\"10.5\" r=\"2.2\" fill=\"#0C4549\"/><circle cx=\"20.5\" cy=\"13.5\" r=\"2.2\" fill=\"#0C4549\"/></svg><span class=\"ds-brand-word\">ZooTech</span></div>",
+      "css": ".ds-brand { display: flex; gap: 12px; align-items: center; } .ds-mark { flex: none; } .ds-brand-word { font-family: var(--display, \"Bricolage Grotesque\", sans-serif); font-weight: 700; font-size: 17px; letter-spacing: -0.02em; line-height: 1.1; color: #fff; }"
+    },
+    {
+      "name": "Status Alert",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Alerta tonal com texto — info e ok usados no build.",
+      "html": "<div class=\"ds-alert ds-alert-ok\" role=\"status\"><strong>Posto registrado</strong> neste computador: Canil.</div>",
+      "css": ".ds-alert { border-radius: 8px; padding: 12px 14px; font: 14px/1.4 var(--body, Figtree, sans-serif); border: 1px solid transparent; max-width: 420px; } .ds-alert strong { font-weight: 600; } .ds-alert-ok { background: var(--ok-50, #E4F3E8); color: #1d5c34; border-color: #b7dfc4; } .ds-alert-info { background: var(--info-50, #E3EDF7); color: #1d4a75; border-color: #c6d9ec; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "A Parede Petróleo",
+    "overview": "ZooTech é identidade de serviço público sanitário, não de vitrine nem de loja de pet. A parede verde-petróleo do login e a lateral do painel são a mesma matéria: autoridade quieta, contraste alto, zero hero de métricas. O miolo opera em névoa e branco; o posto do turno é o centro do painel, não um dashboard de KPIs.\n\nA tipografia carrega a hierarquia: Bricolage Grotesque só nos títulos e na marca, Figtree na interface operacional, IBM Plex Mono no CPF, na matrícula e em identificadores. O escudo âmbar é marcador provisório — não brasão municipal, não acento de UI.",
+    "keyCharacteristics": [
+      "Parede petróleo contínua do login (metade da viewport) ao menu (216 px)",
+      "Âmbar restrito ao escudo provisório inline SVG",
+      "Campos altos (raio 6), botões (raio 8), foco petróleo",
+      "Mono tabular em CPF/matrícula; sem cadastro de animais nesta identidade"
+    ],
+    "rules": [
+      {
+        "name": "The Parede Rule",
+        "body": "Petróleo profundo (#0C4549) é parede e menu — nunca um card hero nem um fundo de marketing.",
+        "section": "colors"
+      },
+      {
+        "name": "The Amber Shield Rule",
+        "body": "Âmbar (#E8A317) só no escudo provisório. Não é acento de botão, link, chip ou destaque de seção.",
+        "section": "colors"
+      },
+      {
+        "name": "The Status-With-Words Rule",
+        "body": "Ok, aviso, crítico e info carregam texto legível sobre o soft correspondente; a cor não basta.",
+        "section": "colors"
+      },
+      {
+        "name": "The Three-Face Rule",
+        "body": "Bricolage só em títulos e marca; Figtree na UI; IBM Plex Mono em CPF, matrícula e IDs — sem misturar papéis.",
+        "section": "typography"
+      },
+      {
+        "name": "The Wall Continuity Rule",
+        "body": "A mesma parede petróleo do login vira o menu de 216 px; o miolo do painel é o posto, não um hero de métricas.",
+        "section": "layout"
+      },
+      {
+        "name": "The Flat-Wall Rule",
+        "body": "A parede petróleo não recebe sombra; elevação fica no miolo (painel) e no foco.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Field-Button Split",
+        "body": "Campo = 6px; botão, nav, escolha e seg = 8px; painel = 10px. Não unificar.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do manter a parede petróleo (#0C4549) como login full-bleed e menu 216 px.",
+      "Do usar âmbar (#E8A317) só no escudo provisório.",
+      "Do tipografar CPF/matrícula em IBM Plex Mono e títulos em Bricolage.",
+      "Do campos raio 6 / botões raio 8 / foco petróleo.",
+      "Do escrever status em texto sobre soft (ok, warn, crit, info)."
+    ],
+    "donts": [
+      "Don't tratar o painel como hero de métricas, vitrine ou loja de pet.",
+      "Don't inventar brasão municipal, logo institucional ou selo de prefeitura.",
+      "Don't usar âmbar como acento geral de UI.",
+      "Don't cadastrar animais nesta superfície de identidade — o menu lista áreas vazias.",
+      "Don't substituir o nome visível ZooTech por CCZ na marca."
+    ]
+  }
+}

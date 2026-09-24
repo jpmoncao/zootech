@@ -8,7 +8,7 @@ Centro de Controle de Zoonoses. Instituição que o ZooTech gere.
 
 ### Identidade visual
 
-Direção visual do ZooTech, ainda não definida. Nenhuma tela, layout, componente ou estilo entra no código antes dela. O bootstrap do monorepo deixa o front sem interface por causa disso.
+Direção visual do ZooTech, registrada em `DESIGN.md`. O guia em `/Users/jpmoncao/Downloads/Guia Visual CCZ.html` é a referência (verde-petróleo, âmbar só no escudo provisório, Bricolage Grotesque, Figtree, IBM Plex Mono). O nome visível é só ZooTech. Não há brasão municipal. A primeira superfície é o login e a casca do painel.
 
 ### ADM
 
