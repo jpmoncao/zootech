@@ -1,45 +1,9 @@
 # ZooTech
 
-Monorepo do painel e da API. Node.js 22+ e pnpm.
+Sistema de gestão do Centro de Controle de Zoonoses.
 
-## Instalar
+O primeiro marco é o login e o painel do veterinário administrador, com todas as funcionalidades do sistema, a gestão de usuários e funcionários e a auditoria. O animal fica sempre em uma baia; o tutor só entra na adoção. A stack prevista é um monorepo Node.js e TypeScript, com Next.js, NestJS, Postgres, pnpm e Turborepo. Esse monorepo ainda não foi criado.
 
-```bash
-pnpm install
-```
-
-## Subir (dois processos independentes)
-
-API (`0.0.0.0:3333`):
-
-```bash
-pnpm --filter @zootech/api dev
-```
-
-ou `pnpm dev:api`.
-
-Painel (`http://127.0.0.1:3000`):
-
-```bash
-pnpm --filter @zootech/web dev
-```
-
-ou `pnpm dev:web`.
-
-Encerrar um lado não derruba o outro.
-
-## Pacotes
-
-| Caminho | Nome | Responsabilidade |
-|---------|------|------------------|
-| `apps/web` | `@zootech/web` | Painel (entrega) |
-| `apps/api` | `@zootech/api` | API HTTP (Clean Architecture) |
-| `packages/contracts` | `@zootech/contracts` | Tipos públicos web↔API |
-| `packages/ui` | `@zootech/ui` | Primitivos visuais |
-| `packages/config` | `@zootech/config` | TypeScript strict e ESLint |
-
-## Checagem de tipos
-
-```bash
-pnpm typecheck
-```
+- `AGENTS.md` — contrato de cada tarefa
+- `DEVELOPMENT_WORKFLOW.md` — fluxo de desenvolvimento
+- `.ai-context/` — produto, domínio e decisões

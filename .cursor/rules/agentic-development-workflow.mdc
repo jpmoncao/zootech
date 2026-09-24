@@ -1,0 +1,68 @@
+---
+description: Universal agentic workflow for software development tasks
+alwaysApply: true
+---
+
+# Agentic Development Workflow
+
+Use this workflow for software development work in any project.
+
+## 1. Understand
+
+- Restate the request in one sentence.
+- Identify the expected outcome and acceptance criteria.
+- Make reasonable, reversible assumptions for small, low-risk tasks and state them briefly.
+- Follow changes the user has explicitly authorized, including necessary architecture, data model, or public behavior changes within that scope.
+- Ask only when a material decision is unresolved, ambiguity could change the outcome, or the proposed work exceeds the authorized scope. Continue independent work while waiting.
+
+## 2. Explore
+
+- Read `.ai-context/overview.md` and `.ai-context/short-term.md` when they exist.
+- Read other files in `.ai-context/` when they are relevant to the task.
+- Inspect relevant files before editing.
+- Use `rg` and `rg --files` for search.
+- Learn the existing architecture, style, naming, tests, and dependencies.
+- Prefer existing project patterns over new abstractions.
+
+## 3. Plan
+
+- For tasks spanning multiple areas, requiring meaningful design choices, or carrying notable risk, write a short plan before editing. Skip a formal plan for localized, low-risk changes; state the intended action briefly instead.
+- Name the files, modules, or commands likely to be involved.
+- Keep the plan small, testable, and tied to the requested outcome.
+- Avoid unrelated refactors.
+- Use `product-spec` when user-facing behavior or scope is unclear; use `implementation-plan` when the technical path needs decisions; use `implementation-tasks` when multiple steps need independent tracking. Do not create all three by default.
+
+## 4. Implement
+
+- Make focused, incremental changes.
+- Preserve surrounding code style.
+- Keep behavior changes explicit.
+- Add comments only for non-obvious logic.
+- Do not overwrite or revert user changes unless explicitly requested.
+
+## 5. Verify
+
+- Run the most relevant checks available: tests, lint, typecheck, or build.
+- Add or update tests when behavior changes and the project has a relevant test setup. If tests are unavailable or impractical, explain the verification used instead.
+- If checks cannot run, explain why and provide a manual validation path.
+
+## 6. Review
+
+- Review the diff before finishing.
+- Look for regressions, edge cases, missing tests, security issues, and confusing API changes.
+- Fix blocking issues within the original scope.
+
+## 7. Update Context
+
+- Update `.ai-context/short-term.md` when priorities, active work, blockers, or next steps change.
+- Update `.ai-context/architecture.md` when system structure, modules, integrations, data flow, testing, or deployment change.
+- Update `.ai-context/decisions.md` when a meaningful product or technical decision is made.
+- Update `.ai-context/glossary.md` when important project-specific terms are introduced.
+- Skip context updates when the change does not affect durable or active project knowledge.
+
+## 8. Report
+
+- Summarize what changed.
+- State how it was verified.
+- Provide concrete examples of how to test the change.
+- Mention risks, limitations, or useful follow-ups.
