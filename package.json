@@ -6,6 +6,7 @@
     "node": ">=22"
   },
   "scripts": {
+    "dev": "turbo run dev",
     "dev:api": "pnpm --filter @zootech/api dev",
     "dev:web": "pnpm --filter @zootech/web dev",
     "lint": "turbo run lint",

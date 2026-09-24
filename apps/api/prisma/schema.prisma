@@ -20,6 +20,24 @@ enum StatusSolicitacao {
   recusada
 }
 
+enum SetorBaia {
+  canil
+  gatil
+  quarentena
+}
+
+enum TipoBaia {
+  coletiva
+  individual
+}
+
+enum EstadoBaia {
+  ativa
+  inativa
+  interditada
+  em_higienizacao
+}
+
 model Usuario {
   id           Int          @id @default(autoincrement())
   nome         String
@@ -93,4 +111,23 @@ model AuditoriaEvento {
   usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
 
   @@map("auditoria_eventos")
+}
+
+model Baia {
+  id                    Int       @id @default(autoincrement())
+  codigo                String
+  codigoNormalizado     String    @unique
+  setor                 SetorBaia
+  tipo                  TipoBaia
+  capacidade            Int
+  areaM2                Decimal?  @db.Decimal(8, 2)
+  possuiSolario         Boolean   @default(false)
+  exclusivaIsolamento   Boolean   @default(false)
+  estado                EstadoBaia @default(ativa)
+  ultimaHigienizacaoEm  DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([setor, estado])
+  @@map("baias")
 }

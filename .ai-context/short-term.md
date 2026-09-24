@@ -2,9 +2,13 @@
 
 ## Current Focus
 
-Autenticação JWT concluída (tarefas 1–10). Login, aceite, menu por papel, Acessos e perfil estão ligados à API. Especificação de gestão de baias criada; próximo passo é revisar decisões abertas e implementar o domínio. Domínio do MVP ainda sem cadastro de animais.
+Autenticação JWT concluída (tarefas 1–10). Gestão de baias concluída no escopo sem Animal: persistência, migração, API autenticada, contrato tipado no front, página de baias com lista/mapa, filtros, indicadores, formulário, detalhe, ocupantes vazios, ações, histórico, autorização por perfil, testes e validação manual. O domínio Animal/ocupação real ainda não existe.
 
 ## Active Tasks
+
+- Gestão de baias em `.ai-context/tasks/gestao-de-baias.md`.
+  - Status: concluído no escopo aprovado
+  - Notes: a migration `gestao_baias` foi aplicada ao Postgres local. A página `/painel/baias` alterna lista/mapa usando os mesmos filtros e indicadores, permite cadastro/edição, detalhe, ações operacionais e histórico para Coordenação. Todos os perfis autenticados consultam baias; somente Coordenação faz CRUD, ações e histórico/auditoria. Validação manual feita em `http://localhost:3002/painel/baias` com login seed, cadastro de baia, busca, mapa, higienização e histórico. Ocupantes, isolamento real e bloqueios por ocupação dependem do modelo Animal.
 
 - Autenticação em `.ai-context/tasks/autenticacao-jwt-rbac.md`.
   - Status: concluído
@@ -18,6 +22,24 @@ Autenticação JWT concluída (tarefas 1–10). Login, aceite, menu por papel, A
 
 ## Recent Changes
 
+- 2026-09-24
+  - Change: Baias, perfil e acessos usam skeleton no carregamento. A baia aberta fica em `/painel/baias?baia=<id>` e o detalhe consulta `obterBaia` com esse id. Skeleton e tons de informação estão em `DESIGN.md`. O id na URL continua em `.cursor/rules/front-url-recurso.mdc`.
+  - Reason: Convenção de front para espera visual e consulta pelo id da URL.
+- 2026-09-24
+  - Change: Task 8 de baias concluída com ampliação dos testes de integração para duplicidade normalizada, capacidade, filtros, estados, higienização e auditoria; validação manual no navegador confirmou cadastro, lista/mapa, busca, detalhe, ações e histórico.
+  - Reason: Validação integrada de gestão de baias.
+- 2026-09-24
+  - Change: Autorização de baias consolidada ponta a ponta: helpers `canManageBaias`/`canViewBaiasAudit` no front e spec Supertest cobrindo consulta para todos os perfis, bloqueio de CRUD/ações/histórico para não Coordenação e fluxo permitido para Coordenação.
+  - Reason: Tarefa 7 de gestão de baias.
+- 2026-09-24
+  - Change: Página `/painel/baias` ganhou formulário lateral de cadastro/edição, painel de detalhe com ocupantes, ações permitidas por estado, mensagens de conflito da API e histórico de auditoria para Coordenação.
+  - Reason: Tarefa 6 de gestão de baias.
+- 2026-09-24
+  - Change: Página `/painel/baias` ganhou lista/mapa responsivos, busca por código, filtros por setor/estado, indicadores e estados de carregamento/vazio/erro. Estilos específicos de baias foram adicionados em `globals.css`.
+  - Reason: Tarefa 5 de gestão de baias.
+- 2026-09-24
+  - Change: Front ganhou contrato tipado de baias em `api.ts`: tipos de domínio, filtros, CRUD sem exclusão física, ações operacionais e histórico usando `ApiError`/refresh existentes.
+  - Reason: Tarefa 4 de gestão de baias.
 - 2026-09-24
   - Change: Casca com refresh de sessão, menu por papel, `/painel/acessos` e `/painel/perfil`. Contexto de arquitetura atualizado com tabelas, JWT e cookie.
   - Reason: Tarefas 8–10 da autenticação.
@@ -48,9 +70,9 @@ Autenticação JWT concluída (tarefas 1–10). Login, aceite, menu por papel, A
 
 ## Blockers
 
-- Decisões operacionais da gestão de baias ainda precisam de confirmação (perfis, motivos, higienização e isolamento).
-  - Impact: regras de autorização e alguns fluxos dependem dessas decisões.
-  - Next action: revisar a seção “Open Questions” da spec antes da implementação.
+- Definir elegibilidade de isolamento e vínculo/fluxo de ocupantes antes do módulo Animal.
+  - Impact: a API atual não pode verificar compatibilidade de ocupantes nem recusar ações por baia ocupada enquanto não existe modelo Animal.
+  - Next action: definir essas regras no início do cadastro/acolhimento de animais.
 - Nenhum bloqueio na autenticação. Agente e recepção veem as mesmas seções, de propósito, até um mapa novo ser pedido.
 
 ## Next Steps

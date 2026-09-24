@@ -18,6 +18,76 @@ export type SolicitacaoCriada = {
   createdAt: string;
 };
 
+export type SetorBaia = "canil" | "gatil" | "quarentena";
+export type TipoBaia = "coletiva" | "individual";
+export type EstadoBaia = "ativa" | "inativa" | "interditada" | "em_higienizacao";
+
+export type AcaoBaia =
+  | "interditar"
+  | "liberar"
+  | "inativar"
+  | "reativar"
+  | "iniciar_higienizacao"
+  | "concluir_higienizacao";
+
+export type BaiaOcupante = {
+  id: number;
+  nome?: string;
+  codigo?: string;
+  especie?: string;
+  emIsolamento?: boolean;
+};
+
+export type Baia = {
+  id: number;
+  codigo: string;
+  codigoNormalizado: string;
+  setor: SetorBaia;
+  tipo: TipoBaia;
+  capacidade: number;
+  areaM2: string | number | null;
+  possuiSolario: boolean;
+  exclusivaIsolamento: boolean;
+  estado: EstadoBaia;
+  ultimaHigienizacaoEm: string | null;
+  createdAt: string;
+  updatedAt: string;
+  ocupantes: BaiaOcupante[];
+  ocupacao: number;
+  vagasDisponiveis: number;
+};
+
+export type ListarBaiasFiltros = {
+  setor?: SetorBaia;
+  estado?: EstadoBaia;
+  busca?: string;
+};
+
+export type CriarBaiaInput = {
+  codigo: string;
+  setor: SetorBaia;
+  tipo: TipoBaia;
+  capacidade: number;
+  areaM2?: number;
+  possuiSolario?: boolean;
+  exclusivaIsolamento?: boolean;
+};
+
+export type AtualizarBaiaInput = Partial<CriarBaiaInput>;
+
+export type AcaoBaiaInput = {
+  observacao?: string;
+};
+
+export type BaiaHistoricoEvento = {
+  id: number;
+  tipo: string;
+  dados: unknown;
+  usuarioId: number | null;
+  createdAt: string;
+  usuario: Pick<PublicUser, "id" | "nome"> | null;
+};
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 let accessToken: string | null = null;
@@ -166,6 +236,48 @@ export function alterarSenha(input: {
     method: "POST",
     body: JSON.stringify(input),
   });
+}
+
+export function listarBaias(filtros: ListarBaiasFiltros = {}): Promise<Baia[]> {
+  const params = new URLSearchParams();
+  if (filtros.setor) params.set("setor", filtros.setor);
+  if (filtros.estado) params.set("estado", filtros.estado);
+  if (filtros.busca?.trim()) params.set("busca", filtros.busca.trim());
+  const query = params.toString();
+  return request<Baia[]>(`/baias${query ? `?${query}` : ""}`, { method: "GET" });
+}
+
+export function obterBaia(id: number): Promise<Baia> {
+  return request<Baia>(`/baias/${id}`, { method: "GET" });
+}
+
+export function criarBaia(input: CriarBaiaInput): Promise<Baia> {
+  return request<Baia>("/baias", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function atualizarBaia(id: number, input: AtualizarBaiaInput): Promise<Baia> {
+  return request<Baia>(`/baias/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function executarAcaoBaia(
+  id: number,
+  acao: AcaoBaia,
+  input: AcaoBaiaInput = {},
+): Promise<Baia> {
+  return request<Baia>(`/baias/${id}/acoes/${acao}`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function listarHistoricoBaia(id: number): Promise<BaiaHistoricoEvento[]> {
+  return request<BaiaHistoricoEvento[]>(`/baias/${id}/historico`, { method: "GET" });
 }
 
 export async function logout(): Promise<void> {

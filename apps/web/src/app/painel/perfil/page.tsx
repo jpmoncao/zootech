@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Shell } from "../../../components/shell";
 import { perfilLabel } from "../../../lib/access";
 import {
@@ -92,7 +93,11 @@ function Perfil() {
           <SenhaForm />
         </>
       ) : erro ? null : (
-        <p className="hint">Carregando perfil…</p>
+        <div className="stack" aria-hidden="true">
+          <Skeleton className="h-28 w-full" />
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-40 w-full" />
+        </div>
       )}
     </>
   );

@@ -10,6 +10,19 @@ Centro de Controle de Zoonoses. Instituição que o ZooTech gere.
 
 Direção visual do ZooTech, registrada em `DESIGN.md`. O guia em `/Users/jpmoncao/Downloads/Guia Visual CCZ.html` é a referência (verde-petróleo, âmbar só no escudo provisório, Bricolage Grotesque, Figtree, IBM Plex Mono). O nome visível é só ZooTech. Não há brasão municipal. A primeira superfície é o login e a casca do painel.
 
+### Tons de informação
+
+Cor identifica o status. Na mesma tela, cada status reconhecível tem uma cor só, para a pessoa ver a cor e saber do que se trata. O rótulo permanece. O mapa vive em `DESIGN.md` (Status). Tokens em `apps/web/src/app/globals.css`.
+
+- Petróleo (`--primary`): identidade, navegação e ação principal. Não classifica estado.
+- Verde (`--ok`): ativa, liberada, reativada, concluída.
+- Azul (`--info`): higienização.
+- Vermelho (`--crit`): interditada, erro.
+- Cinza (`--muted`): inativa.
+- Âmbar (`--warn`): pendência que ainda não tem tom próprio. Não é o âmbar do escudo.
+
+Na baia, o estado operacional usa verde para ativa, azul para higienização, vermelho para interditada e cinza para inativa.
+
 ### ADM
 
 Veterinário administrador. No painel, executa todas as funcionalidades do sistema, cadastra e gere usuários e funcionários, e consulta a auditoria. Não há classe própria: o acesso fica em `Usuario.perfilAcesso`. Na interface, esse papel se chama Coordenação (`coordenacao`). Só ele aceita solicitações de acesso e troca o tipo de um usuário já ativo.
@@ -32,11 +45,11 @@ Animal acompanhado pelo CCZ: nome, espécie, raça, sexo, porte, cor, microchip 
 
 ### Baia
 
-Local que abriga zero ou mais animais. Todo animal está em exatamente uma baia e pode ser transferido. Possui código único, setor (canil, gatil ou quarentena), tipo (coletiva ou individual), capacidade, área opcional, solário, exclusividade para isolamento, última higienização opcional e estado operacional (ativa, inativa, interditada ou em higienização). Regras e fluxos estão em `.ai-context/specs/gestao-de-baias.md`.
+Local que abriga zero ou mais animais. Todo animal está em exatamente uma baia e pode ser transferido. O cadastro persiste código único sem distinção de caixa, setor (canil, gatil ou quarentena), tipo (coletiva ou individual), capacidade, área opcional, solário, exclusividade para isolamento, última higienização opcional e estado operacional (ativa, inativa, interditada ou em higienização). A relação de ocupantes será adicionada com o domínio Animal. Regras e fluxos estão em `.ai-context/specs/gestao-de-baias.md`.
 
 ### Auditoria
 
-Registro consultável pelo ADM. Os eventos gravados ainda não foram listados. A transferência de baia não tem histórico próprio separado deste registro, até que isso seja pedido.
+Registro consultável pelo ADM/Coordenação. Eventos de baias usam `AuditoriaEvento` com `dados.entidade = "baia"` e `dados.entidadeId`, cobrindo criação, edição, interdição/liberação, inativação/reativação e higienização. A transferência de baia não tem histórico próprio separado deste registro, até que isso seja pedido.
 
 ### Prontuário
 

@@ -2,13 +2,13 @@
 
 ## System Summary
 
-Monorepo pnpm e Turborepo com `apps/web` (Next.js: login, casca do painel, Acessos e perfil) e `apps/api` (NestJS com auth JWT, usuários e `GET /health`). Postgres local está no `compose.yaml`, com migração Prisma `auth_core`. O domínio de animais e baias ainda não tem código.
+Monorepo pnpm e Turborepo com `apps/web` (Next.js: login, casca do painel, Acessos e perfil) e `apps/api` (NestJS com auth JWT, usuários, baias e `GET /health`). Postgres local está no `compose.yaml`, com migrações Prisma `auth_core` e `gestao_baias`. O domínio de animais ainda não tem código.
 
 ## Main Modules
 
-- `apps/web`: Next.js com tela de entrar, casca do painel, `/painel/acessos` e `/painel/perfil`. Cliente HTTP em `src/lib/api.ts` (JWT em memória, refresh via cookie). Menu filtrado por papel em `src/lib/access.ts`.
-- `apps/api`: NestJS com módulos `auth`, `users` e `prisma`. Escuta em `0.0.0.0` e `PORT` (padrão 3001). `GET /health` não consulta o banco. Seed de coordenação no boot (`src/seed.ts`).
-- `apps/api/prisma`: esquema e migração das tabelas de autenticação.
+- `apps/web`: Next.js com tela de entrar, casca do painel, `/painel/acessos`, `/painel/perfil` e `/painel/baias`. Cliente HTTP em `src/lib/api.ts` (JWT em memória, refresh via cookie). Menu filtrado por papel em `src/lib/access.ts`.
+- `apps/api`: NestJS com módulos `auth`, `users`, `baias` e `prisma`. Baias oferece consulta, CRUD coordenado, ações operacionais e histórico. Escuta em `0.0.0.0` e `PORT` (padrão 3001). `GET /health` não consulta o banco. Seed de coordenação no boot (`src/seed.ts`).
+- `apps/api/prisma`: esquema e migrações de autenticação e baias.
 - `compose.yaml`: Postgres 17 local.
 - `tsconfig.base.json` e `eslint.config.mjs`: config compartilhada.
 
@@ -16,7 +16,7 @@ Pacote de contratos ainda não existe.
 
 ## Data Flow
 
-O front chama a API com `credentials: "include"`. Login bem-sucedido devolve JWT de acesso (15 minutos, só o id) e grava cookie de refresh HttpOnly (`SameSite=Lax`; `Secure` só em produção; 14 dias com “manter conectado”, senão cookie de sessão). Rotas protegidas leem `perfilAcesso` no banco. A coordenação aceita pedidos e troca tipo; o painel esconde seções fora do papel. Eventos mínimos de auditoria ficam em `AuditoriaEvento` (sem tela). Domínio de animal e baia ainda não passa pela API.
+O front chama a API com `credentials: "include"`. Login bem-sucedido devolve JWT de acesso (15 minutos, só o id) e grava cookie de refresh HttpOnly (`SameSite=Lax`; `Secure` só em produção; 14 dias com “manter conectado”, senão cookie de sessão). Rotas protegidas leem `perfilAcesso` no banco. Baias permite consulta autenticada e restringe cadastro, edição, ações e histórico à Coordenação (política provisória enquanto a matriz RBAC da spec não for aprovada). A rota `/painel/baias` usa lista/mapa, filtros compartilhados, formulário lateral, painel de detalhe, ações por estado e histórico. Alterações de baia e seus eventos de auditoria são gravados na mesma transação. Ocupantes ainda não são persistidos porque o modelo Animal não existe.
 
 ## External Integrations
 
@@ -31,6 +31,7 @@ Postgres via Prisma. Tabelas deste marco:
 - `Solicitacao` — pedido de acesso (`pendente` / `aceita` / `recusada`), função pretendida e hash da senha.
 - `RefreshToken` — só o hash do refresh; invalidados na troca de tipo e na troca de senha (exceto o cookie atual).
 - `AuditoriaEvento` — tipo, usuário e dados JSON.
+- `Baia` — código e código normalizado único, setor, tipo, capacidade, área opcional, solário, exclusividade de isolamento, estado e última higienização. Eventos identificam `entidade: "baia"` e `entidadeId` string em `dados` da auditoria.
 
 CPF, e-mail e matrícula são únicos entre contas ativas (regra na aplicação). Tutor não entra neste marco. Herança `Usuario` → `Tutor` e o restante do domínio continuam só no diagrama.
 
@@ -48,7 +49,7 @@ O diagrama original dizia que todo animal tem exatamente um tutor e não tinha `
 
 - Todo animal ocupa exatamente uma baia e pode ser transferido para outra.
 - O animal entra sem tutor. O tutor só é vinculado quando o animal é atribuído a uma adoção.
-- Atributos de `Baia` além da identidade ainda não foram definidos.
+- `Baia` persiste os atributos de cadastro definidos em `.ai-context/specs/gestao-de-baias.md`; ocupantes dependem do futuro modelo Animal.
 - Transferência troca a baia atual. Não houve pedido de tabela de histórico própria; o registro de auditoria cobre a mudança. Needs confirmation se o histórico de baias precisa existir fora da auditoria.
 
 Relações vigentes:
@@ -194,7 +195,7 @@ O painel do veterinário ADM reúne todas as funcionalidades do sistema, mais a 
 
 ## Testing Strategy
 
-Jest e supertest em `apps/api` cobrem `GET /health` e as regras de auth (pedido, login, 403, aceite, CRMV, troca de tipo, última coordenação). O front não tem testes automatizados; o fluxo de login, Acessos e perfil foi exercido no navegador.
+Jest e supertest em `apps/api` cobrem `GET /health`, as regras de auth (pedido, login, 403, aceite, CRMV, troca de tipo, última coordenação) e baias (consulta autenticada, autorização por perfil, duplicidade normalizada de código, capacidade, filtros, transições de estado, higienização e auditoria). O front não tem testes automatizados; fluxos são validados por typecheck, lint, build e verificação manual no navegador. A ocupação real e a compatibilidade de isolamento serão testadas quando o domínio Animal existir.
 
 ## Local Development
 

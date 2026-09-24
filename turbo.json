@@ -4,9 +4,20 @@
     "lint": {},
     "typecheck": {},
     "test": {},
+    "dev": {
+      "dependsOn": [
+        "^dev:api",
+        "^dev:web"
+      ]
+    },
     "build": {
-      "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**"]
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        "dist/**",
+        ".next/**"
+      ]
     }
   }
 }

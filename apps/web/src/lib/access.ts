@@ -36,3 +36,11 @@ export function canAccess(perfil: PerfilAcesso, sectionId: string): boolean {
   if (!roles) return false;
   return roles.includes(perfil);
 }
+
+export function canManageBaias(perfil: PerfilAcesso): boolean {
+  return perfil === "coordenacao";
+}
+
+export function canViewBaiasAudit(perfil: PerfilAcesso): boolean {
+  return perfil === "coordenacao";
+}

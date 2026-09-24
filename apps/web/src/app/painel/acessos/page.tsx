@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Shell } from "../../../components/shell";
 import { canAccess, perfilLabel } from "../../../lib/access";
 import {
@@ -75,7 +76,7 @@ function Acessos() {
       ) : null}
       <section className="stack" aria-label="Pedidos pendentes">
         <h2>Pedidos pendentes</h2>
-        {fila === null ? <p className="hint">Carregando pedidos…</p> : null}
+        {fila === null ? <Skeleton className="h-24 w-full" /> : null}
         {fila?.length === 0 ? <p className="hint">Nenhum pedido aguardando aceite.</p> : null}
         {fila?.map((pedido) => (
           <PedidoCard
@@ -93,7 +94,7 @@ function Acessos() {
       </section>
       <section className="stack" aria-label="Usuários ativos">
         <h2>Usuários ativos</h2>
-        {usuarios === null ? <p className="hint">Carregando usuários…</p> : null}
+        {usuarios === null ? <Skeleton className="h-24 w-full" /> : null}
         {usuarios?.map((usuario) => (
           <UsuarioCard
             key={usuario.id}

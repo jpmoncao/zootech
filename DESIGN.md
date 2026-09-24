@@ -174,14 +174,27 @@ Petróleo profundo na parede e no menu; névoa e branco no miolo; tinta escura n
 - **Sobre Escuro** (#E3F0EF) / **Sobre Escuro Suave** (#A9CBC7): texto na parede petróleo.
 
 ### Status
-- **Ok** (#2F8A4E / soft #E4F3E8), **Aviso** (#A35F00 / soft #FCEFD9), **Crítico** (#B93A2B / soft #FBE6E3), **Info** (#2E6AA3 / soft #E3EDF7): alertas com texto escuro sobre fundo claro; status nunca só pela cor.
+Cada estado que a pessoa precisa distinguir na mesma tela tem uma cor só. Ver a cor deve bastar para saber do que se trata; o rótulo confirma. Não reutilize um tom para dois status vizinhos. Fundo no soft do tom; ícone ou borda na cor forte.
+
+| Tom | Cor | Significado |
+| --- | --- | --- |
+| Petróleo | #135E63 | Identidade, navegação e ação principal. Não classifica estado. |
+| Verde | #2F8A4E / soft #E4F3E8 | Ativa, liberada, reativada, concluída. |
+| Azul | #2E6AA3 / soft #E3EDF7 | Higienização. |
+| Vermelho | #B93A2B / soft #FBE6E3 | Interditada, erro. |
+| Cinza | #5B6B68 sobre névoa #F4F7F6 | Inativa. |
+| Âmbar de estado | #A35F00 / soft #FCEFD9 | Pendência que ainda não tem tom próprio. Não é o âmbar do escudo. |
+
+Na baia, o estado operacional e a ação que leva a ele usam a mesma cor: ativa verde, higienização azul, interditada vermelho, inativa cinza.
 
 ### Named Rules
 **The Parede Rule.** Petróleo profundo (#0C4549) é parede e menu — nunca um card hero nem um fundo de marketing.
 
 **The Amber Shield Rule.** Âmbar (#E8A317) só no escudo provisório. Não é acento de botão, link, chip ou destaque de seção.
 
-**The Status-With-Words Rule.** Ok, aviso, crítico e info carregam texto legível sobre o soft correspondente; a cor não basta.
+**The One-Color-One-Status Rule.** Na mesma superfície, cada status reconhecível tem cor exclusiva. Se dois estados compartilham o tom, separe-os. A pessoa olha a cor e já sabe o que é; o texto não é o único sinal.
+
+**The Status-With-Words Rule.** O rótulo permanece junto da cor. A cor não substitui a palavra, e a palavra não dispensa a cor distinta.
 
 ## Typography
 
@@ -241,6 +254,7 @@ Cantos funcionais, sem pílulas de marketing: campo 6px, controles interativos 8
 ### Cards / Containers
 - **Panel:** superfície, borda linha, raio 10px, padding 20px, sombra panel — só onde há interação (ex.: confirmar posto).
 - **Alert:** raio 8px, padding 12×14, soft + borda tonal + texto escuro (info / ok / warn).
+- **Skeleton:** pulso em petróleo suave (`bg-muted`), raio 8px, no lugar da lista, do painel ou do formulário enquanto a consulta inicial não chega. Título e ações que não dependem da resposta permanecem. Sem texto “Carregando…” no meio da área. Botão em envio pode ter spinner. Erro é alerta; vazio depois da resposta é o estado vazio, sem skeleton.
 
 ### Inputs / Fields
 - **Control:** min-height 52px (56px no login), raio 6px, borda linha, padding 8×12.
@@ -266,7 +280,8 @@ Cantos funcionais, sem pílulas de marketing: campo 6px, controles interativos 8
 - **Do** usar âmbar (#E8A317) só no escudo provisório.
 - **Do** tipografar CPF/matrícula em IBM Plex Mono e títulos em Bricolage.
 - **Do** campos raio 6 / botões raio 8 / foco petróleo.
-- **Do** escrever status em texto sobre soft (ok, warn, crit, info).
+- **Do** dar a cada status da mesma tela uma cor exclusiva, com o rótulo junto.
+- **Do** ocupar a área que ainda carrega com skeleton na forma do conteúdo.
 
 ### Don't:
 - **Don't** tratar o painel como hero de métricas, vitrine ou loja de pet.
