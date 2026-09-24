@@ -2,21 +2,39 @@
 
 ## Current Focus
 
-Bootstrap do monorepo concluído em 2026-09-23. A identidade visual está em `DESIGN.md`. O front tem login e a casca do painel. A API responde só em `GET /health`. O domínio do MVP continua sem cadastro de animais.
+Autenticação JWT concluída (tarefas 1–10). Login, aceite, menu por papel, Acessos e perfil estão ligados à API. Especificação de gestão de baias criada; próximo passo é revisar decisões abertas e implementar o domínio. Domínio do MVP ainda sem cadastro de animais.
 
 ## Active Tasks
 
+- Autenticação em `.ai-context/tasks/autenticacao-jwt-rbac.md`.
+  - Status: concluído
+  - Notes: Casca restaura sessão pelo refresh; Acessos e perfil no front; typecheck e lint na raiz passam; fluxo exercido no navegador.
 - Bootstrap em `.ai-context/tasks/bootstrap-monorepo.md`.
   - Status: concluído
   - Notes: sem telas, sem ORM, sem domínio; Postgres só como Compose e `DATABASE_URL`
 - Escrever a spec do MVP (painel ADM).
-  - Status: bloqueada pela identidade visual para qualquer tela
-  - Notes: o painel ADM inclui UC02–UC10, gestão de usuários/funcionários e auditoria
+  - Status: em andamento
+  - Notes: spec de baias registrada em `.ai-context/specs/gestao-de-baias.md`; demais funcionalidades do painel ADM ainda precisam ser especificadas.
 
 ## Recent Changes
 
+- 2026-09-24
+  - Change: Casca com refresh de sessão, menu por papel, `/painel/acessos` e `/painel/perfil`. Contexto de arquitetura atualizado com tabelas, JWT e cookie.
+  - Reason: Tarefas 8–10 da autenticação.
+- 2026-09-24
+  - Change: Testes Jest/supertest das regras de auth. Login e pedido no front chamam a API, com JWT em memória. A última coordenação recebe o aviso de rebaixamento antes da recusa de auto-troca.
+  - Reason: Tarefas 6 e 7 da autenticação.
+- 2026-09-24
+  - Change: Fila `GET /auth/solicitacoes`, aceite/recusa, `GET /usuarios`, `PATCH /usuarios/:id/perfil` (só coordenação), `PATCH /auth/me` e `POST /auth/me/senha`. RolesGuard lê `perfilAcesso` no banco.
+  - Reason: Tarefa 5 da autenticação.
+- 2026-09-24
+  - Change: Endpoints `POST /auth/solicitacoes`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` e `GET /auth/me`. Cookie de refresh HttpOnly; CORS com credentials; eventos de pedido e login.
+  - Reason: Tarefa 4 da autenticação.
+- 2026-09-24
+  - Change: API com Prisma, migração `auth_core` (usuário, funcionário, solicitação, refresh, auditoria) e seed de coordenação no boot. Dependências JWT, bcrypt e cookie-parser declaradas.
+  - Reason: Tarefas 1–3 da autenticação.
 - 2026-09-23
-  - Change: Login e casca do painel no front, com a identidade do guia. Sem cadastro de animais. Senha ainda não conferida pela API.
+  - Change: Login e casca do painel no front, com a identidade do guia. Sem cadastro de animais.
   - Reason: A identidade precisava existir antes das telas de domínio.
 - 2026-09-23
   - Change: Monorepo criado com `apps/web` sem tela, `apps/api` só com `GET /health` e Postgres local sem esquema.
@@ -30,18 +48,20 @@ Bootstrap do monorepo concluído em 2026-09-23. A identidade visual está em `DE
 
 ## Blockers
 
-- Atributos da baia, os eventos gravados na auditoria e os valores de `perfilAcesso` ainda não foram listados.
-  - Impact: a spec precisa assumir esses detalhes ou recebê-los.
-  - Next action: seguir com suposições explícitas na spec, se não houver outra rodada de diagrama.
+- Decisões operacionais da gestão de baias ainda precisam de confirmação (perfis, motivos, higienização e isolamento).
+  - Impact: regras de autorização e alguns fluxos dependem dessas decisões.
+  - Next action: revisar a seção “Open Questions” da spec antes da implementação.
+- Nenhum bloqueio na autenticação. Agente e recepção veem as mesmas seções, de propósito, até um mapa novo ser pedido.
 
 ## Next Steps
 
-1. Escrever a spec do painel ADM em cima da identidade já registrada.
-2. Ligar o login a uma sessão real na API. Hoje a senha não é conferida e a sessão fica no navegador.
+1. Escrever a spec do painel ADM (UC02–UC10 e auditoria) em cima da identidade já registrada.
+2. Implementar o domínio a partir dessa spec.
 
 ## Things To Remember
 
 - Não restaurar o bootstrap apagado.
 - O veterinário ADM enxerga todas as funcionalidades. Funcionário e veterinário continuam com os casos de uso do diagrama.
-- Interface em `apps/web` usa shadcn, no tema de `DESIGN.md`. Login e casca já usam esses componentes.
-- Persistência é Postgres. Não há fila, storage externo nem serviço de terceiros neste momento.
+- Interface em `apps/web` usa shadcn, no tema de `DESIGN.md`. Login, casca, Acessos e perfil usam esses componentes.
+- Persistência é Postgres. Não há fila externa, storage nem serviço de terceiros neste momento.
+- Conta seed local: ver `apps/api/.env.example` (`SEED_COORDENACAO_*`). Sem `.env`, o seed não cria a conta.

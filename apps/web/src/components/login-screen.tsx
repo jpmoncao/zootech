@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useId, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -8,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
+import { ApiError, criarSolicitacao, login } from "../lib/api";
 import { Mark } from "./mark";
-import { maskIdentifier, writeSession } from "../lib/session";
+import { maskIdentifier, readPosto, writePosto } from "../lib/session";
 
 type Mode = "enter" | "request";
 type Step = 1 | 2 | 3 | "done";
@@ -53,32 +55,45 @@ export function LoginScreen() {
 }
 
 function EnterForm({ onRequest }: { onRequest: () => void }) {
+  const router = useRouter();
   const idError = useId();
   const passError = useId();
+  const formError = useId();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [persist, setPersist] = useState(false);
   const [idMessage, setIdMessage] = useState<string | null>(null);
   const [passMessage, setPassMessage] = useState<string | null>(null);
+  const [formMessage, setFormMessage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
     const masked = maskIdentifier(identifier);
     const passMissing = password.trim().length === 0;
     setIdMessage(masked.ok ? null : masked.message);
     setPassMessage(passMissing ? "Informe a senha." : null);
+    setFormMessage(null);
     if (!masked.ok || passMissing) return;
 
     setPending(true);
-    writeSession({
-      identifier: masked.identifier,
-      display: masked.display,
-      persist,
-      posto: null,
-    });
-    window.location.assign("/painel");
+    try {
+      await login({
+        identificador: masked.identifier,
+        senha: password,
+        manterConectado: persist,
+      });
+      writePosto(readPosto());
+      router.push("/painel");
+    } catch (error) {
+      setFormMessage(
+        error instanceof ApiError
+          ? error.message
+          : "Não foi possível falar com o servidor.",
+      );
+      setPending(false);
+    }
   }
 
   return (
@@ -148,11 +163,11 @@ function EnterForm({ onRequest }: { onRequest: () => void }) {
         />
         <Label htmlFor="persist">Manter conectado neste computador</Label>
       </div>
-      <p className="hint">
-        A senha não é conferida pelo servidor.
-        <br />
-        A sessão fica neste navegador.
-      </p>
+      {formMessage ? (
+        <p className="error-text" id={formError} role="alert">
+          {formMessage}
+        </p>
+      ) : null}
       <Button className="w-full" type="submit" disabled={pending}>
         {pending ? "Entrando…" : "Entrar"}
       </Button>
@@ -179,6 +194,7 @@ function RequestAccess({ onBack }: { onBack: () => void }) {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
 
   function nextFromIdentity(event: FormEvent) {
     event.preventDefault();
@@ -218,7 +234,7 @@ function RequestAccess({ onBack }: { onBack: () => void }) {
     setStep(3);
   }
 
-  function finish(event: FormEvent) {
+  async function finish(event: FormEvent) {
     event.preventDefault();
     if (password.length < 8) {
       setError("A senha precisa ter pelo menos 8 caracteres.");
@@ -228,8 +244,39 @@ function RequestAccess({ onBack }: { onBack: () => void }) {
       setError("A confirmação não é igual à senha.");
       return;
     }
+    if (!role) {
+      setError("Escolha a função no CCZ.");
+      return;
+    }
+
+    const cpfMask = maskIdentifier(cpf);
+    const matriculaMask = maskIdentifier(matricula);
+    if (!cpfMask.ok || !matriculaMask.ok) {
+      setError("Revise CPF e matrícula.");
+      return;
+    }
+
     setError(null);
-    setStep("done");
+    setPending(true);
+    try {
+      await criarSolicitacao({
+        nome: name.trim(),
+        cpf: cpfMask.identifier,
+        matricula: matriculaMask.identifier,
+        email: email.trim(),
+        funcaoPretendida: role,
+        ...(role === "veterinario" ? { crmv: crmv.replace(/\D/g, "") } : {}),
+        senha: password,
+      });
+      setStep("done");
+    } catch (caught) {
+      setError(
+        caught instanceof ApiError
+          ? caught.message
+          : "Não foi possível falar com o servidor.",
+      );
+      setPending(false);
+    }
   }
 
   return (
@@ -241,12 +288,11 @@ function RequestAccess({ onBack }: { onBack: () => void }) {
       </ol>
       {step === "done" ? (
         <>
-          <h2>Pedido anotado aqui</h2>
+          <h2>Pedido enviado</h2>
           <Alert variant="info">
             <AlertDescription className="text-inherit">
-              Quando o acesso estiver ligado ao servidor, a coordenação do CCZ
-              recebe este pedido. Agora ele não sai deste navegador, e esta tela
-              não entra no painel.
+              A coordenação do CCZ vai analisar este pedido. Esta tela não entra
+              no painel.
             </AlertDescription>
           </Alert>
           <Button type="button" onClick={onBack}>
@@ -352,7 +398,9 @@ function RequestAccess({ onBack }: { onBack: () => void }) {
             <Button variant="outline" type="button" onClick={() => { setError(null); setStep(2); }}>
               Voltar
             </Button>
-            <Button type="submit">Enviar pedido</Button>
+            <Button type="submit" disabled={pending}>
+              {pending ? "Enviando…" : "Enviar pedido"}
+            </Button>
           </div>
         </form>
       ) : null}

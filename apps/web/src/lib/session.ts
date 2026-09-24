@@ -1,35 +1,19 @@
-export type Session = {
-  identifier: string;
-  display: string;
-  persist: boolean;
-  posto: string | null;
-};
-
 const KEY = "zootech.session";
 
-export function readSession(): Session | null {
+export function readPosto(): string | null {
   const raw = window.localStorage.getItem(KEY) ?? window.sessionStorage.getItem(KEY);
   if (!raw) return null;
   try {
-    const data = JSON.parse(raw) as Session;
-    if (!data.display || !data.identifier) return null;
-    return data;
+    const data = JSON.parse(raw) as { posto?: unknown };
+    return typeof data.posto === "string" ? data.posto : null;
   } catch {
     return null;
   }
 }
 
-export function writeSession(session: Session) {
-  const raw = JSON.stringify(session);
-  window.localStorage.removeItem(KEY);
+export function writePosto(posto: string | null) {
   window.sessionStorage.removeItem(KEY);
-  const store = session.persist ? window.localStorage : window.sessionStorage;
-  store.setItem(KEY, raw);
-}
-
-export function clearSession() {
-  window.localStorage.removeItem(KEY);
-  window.sessionStorage.removeItem(KEY);
+  window.localStorage.setItem(KEY, JSON.stringify({ posto }));
 }
 
 export function maskIdentifier(

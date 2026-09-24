@@ -12,7 +12,7 @@ Direção visual do ZooTech, registrada em `DESIGN.md`. O guia em `/Users/jpmonc
 
 ### ADM
 
-Veterinário administrador. No painel, executa todas as funcionalidades do sistema, cadastra e gere usuários e funcionários, e consulta a auditoria. Não há classe própria: o acesso fica em `Usuario.perfilAcesso`. Os valores desse campo ainda não foram enumerados.
+Veterinário administrador. No painel, executa todas as funcionalidades do sistema, cadastra e gere usuários e funcionários, e consulta a auditoria. Não há classe própria: o acesso fica em `Usuario.perfilAcesso`. Na interface, esse papel se chama Coordenação (`coordenacao`). Só ele aceita solicitações de acesso e troca o tipo de um usuário já ativo.
 
 ### Veterinário
 
@@ -32,7 +32,7 @@ Animal acompanhado pelo CCZ: nome, espécie, raça, sexo, porte, cor, microchip 
 
 ### Baia
 
-Local que abriga zero ou mais animais. Todo animal está em uma baia. Atributos além do identificador ainda não foram definidos.
+Local que abriga zero ou mais animais. Todo animal está em exatamente uma baia e pode ser transferido. Possui código único, setor (canil, gatil ou quarentena), tipo (coletiva ou individual), capacidade, área opcional, solário, exclusividade para isolamento, última higienização opcional e estado operacional (ativa, inativa, interditada ou em higienização). Regras e fluxos estão em `.ai-context/specs/gestao-de-baias.md`.
 
 ### Auditoria
 
@@ -64,4 +64,8 @@ Registro profissional do veterinário, campo `crmv` em `Funcionario`.
 
 ### perfilAcesso
 
-Campo texto em `Usuario` que distingue o tipo de acesso. Enumeração ainda não definida.
+Campo em `Usuario` que distingue o tipo de acesso e alimenta o RBAC. A spec `.ai-context/specs/autenticacao-jwt-rbac.md` usa quatro valores: `coordenacao`, `veterinario`, `agente` e `recepcao`. A função que vale é a escolhida no aceite. Depois disso, só `coordenacao` troca o tipo. O próprio usuário não troca.
+
+### Solicitação de acesso
+
+Pedido de um servidor ainda sem conta ativa. Nasce no login, fica `pendente` até o veterinário administrador aceitar ou recusar, e só vira `Usuario` e `Funcionario` no aceite.

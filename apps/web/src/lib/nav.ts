@@ -15,6 +15,12 @@ export const painelItem: NavItem = {
   label: "Painel",
 };
 
+export const acessosItem: NavItem = {
+  href: "/painel/acessos",
+  id: "acessos",
+  label: "Acessos",
+};
+
 export const navGroups: NavGroup[] = [
   {
     label: "Plantel",
@@ -33,6 +39,10 @@ export const navGroups: NavGroup[] = [
       { href: "/painel/denuncias", id: "denuncias", label: "Denúncias" },
       { href: "/painel/relatorios", id: "relatorios", label: "Relatórios" },
     ],
+  },
+  {
+    label: "Gestão",
+    items: [acessosItem],
   },
 ];
 

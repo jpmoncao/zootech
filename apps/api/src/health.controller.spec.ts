@@ -7,6 +7,8 @@ describe("GET /health", () => {
   let app: INestApplication;
 
   beforeAll(async () => {
+    process.env.JWT_SECRET ??= "test-only-jwt-secret";
+
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();

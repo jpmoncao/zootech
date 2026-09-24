@@ -2,20 +2,21 @@
 
 ## System Summary
 
-Monorepo pnpm e Turborepo com `apps/web` (Next.js, sem tela) e `apps/api` (NestJS, só `GET /health`). Postgres local está no `compose.yaml`, sem esquema. O diagrama de classes de 2026-09-23 continua sem código de domínio.
+Monorepo pnpm e Turborepo com `apps/web` (Next.js: login, casca do painel, Acessos e perfil) e `apps/api` (NestJS com auth JWT, usuários e `GET /health`). Postgres local está no `compose.yaml`, com migração Prisma `auth_core`. O domínio de animais e baias ainda não tem código.
 
 ## Main Modules
 
-- `apps/web`: pacote Next.js sem tela, layout vazio e página que não renderiza conteúdo.
-- `apps/api`: NestJS com `GET /health`. Escuta em `0.0.0.0` e `PORT` (padrão 3001). Não abre conexão com o banco.
-- `compose.yaml`: Postgres 17 local. Sem migração.
+- `apps/web`: Next.js com tela de entrar, casca do painel, `/painel/acessos` e `/painel/perfil`. Cliente HTTP em `src/lib/api.ts` (JWT em memória, refresh via cookie). Menu filtrado por papel em `src/lib/access.ts`.
+- `apps/api`: NestJS com módulos `auth`, `users` e `prisma`. Escuta em `0.0.0.0` e `PORT` (padrão 3001). `GET /health` não consulta o banco. Seed de coordenação no boot (`src/seed.ts`).
+- `apps/api/prisma`: esquema e migração das tabelas de autenticação.
+- `compose.yaml`: Postgres 17 local.
 - `tsconfig.base.json` e `eslint.config.mjs`: config compartilhada.
 
 Pacote de contratos ainda não existe.
 
 ## Data Flow
 
-O painel do veterinário ADM autentica na API e, a partir daí, opera o domínio inteiro e a gestão de usuários. A API persiste tudo no Postgres, inclusive o registro de auditoria. Não há outro serviço no caminho.
+O front chama a API com `credentials: "include"`. Login bem-sucedido devolve JWT de acesso (15 minutos, só o id) e grava cookie de refresh HttpOnly (`SameSite=Lax`; `Secure` só em produção; 14 dias com “manter conectado”, senão cookie de sessão). Rotas protegidas leem `perfilAcesso` no banco. A coordenação aceita pedidos e troca tipo; o painel esconde seções fora do papel. Eventos mínimos de auditoria ficam em `AuditoriaEvento` (sem tela). Domínio de animal e baia ainda não passa pela API.
 
 ## External Integrations
 
@@ -23,7 +24,21 @@ Nenhuma. Só o banco Postgres.
 
 ## Storage
 
-Postgres. Estratégia relacional da herança `Usuario` → `Funcionario` / `Tutor` (tabela única ou tabelas separadas) ainda não foi decidida.
+Postgres via Prisma. Tabelas deste marco:
+
+- `Usuario` — nome, e-mail, hash da senha, CPF, telefone, `perfilAcesso`, `ativo`.
+- `Funcionario` — matrícula, cargo, CRMV; FK para `Usuario`.
+- `Solicitacao` — pedido de acesso (`pendente` / `aceita` / `recusada`), função pretendida e hash da senha.
+- `RefreshToken` — só o hash do refresh; invalidados na troca de tipo e na troca de senha (exceto o cookie atual).
+- `AuditoriaEvento` — tipo, usuário e dados JSON.
+
+CPF, e-mail e matrícula são únicos entre contas ativas (regra na aplicação). Tutor não entra neste marco. Herança `Usuario` → `Tutor` e o restante do domínio continuam só no diagrama.
+
+## Authentication
+
+- Papéis: `coordenacao`, `veterinario`, `agente`, `recepcao`. Só `coordenacao` lista/aceita/recusa pedidos e troca tipo.
+- Conta seed: variáveis `SEED_COORDENACAO_*` e `JWT_SECRET` em `apps/api/.env.example`.
+- Front: `zootech.session` guarda só o posto do turno. Recarregar o painel chama `POST /auth/refresh`. Um 401 tenta um único refresh e, se falhar, volta para `/` sem apagar o posto.
 
 ## Domain Model
 
@@ -179,11 +194,11 @@ O painel do veterinário ADM reúne todas as funcionalidades do sistema, mais a 
 
 ## Testing Strategy
 
-Jest em `apps/api` cobre `GET /health`. O front não tem testes.
+Jest e supertest em `apps/api` cobrem `GET /health` e as regras de auth (pedido, login, 403, aceite, CRMV, troca de tipo, última coordenação). O front não tem testes automatizados; o fluxo de login, Acessos e perfil foi exercido no navegador.
 
 ## Local Development
 
-Node.js 22 ou superior e pnpm 11. `pnpm install` na raiz. `pnpm dev:api` sobe a API. `docker compose up -d` sobe o Postgres. O front não tem tela para abrir.
+Node.js 22 ou superior e pnpm 11. `pnpm install` na raiz. `docker compose up -d` (ou Postgres local) e `DATABASE_URL`. Copiar `apps/api/.env.example` para `.env` com `JWT_SECRET` e `SEED_COORDENACAO_*`. `pnpm dev:api` e `pnpm --filter @zootech/web dev` sobem API (3001) e front (3000).
 
 ## Deployment
 

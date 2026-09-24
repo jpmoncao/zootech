@@ -119,3 +119,27 @@
 **Rationale:** O workflow novo é o ponto de partida.
 
 **Consequences:** O histórico Git ainda contém a árvore antiga até um commit registrar o reset.
+
+## 2026-09-24 — Só a coordenação aceita acesso e troca tipo
+
+**Status:** Accepted
+
+**Context:** O pedido de acesso já existe na tela de login, sem fila nem papel gravado. Faltava dizer quem aceita o servidor novo e quem pode mudar a função depois.
+
+**Decision:** Só o perfil `coordenacao` aceita ou recusa a solicitação e escolhe a função nesse aceite. Só `coordenacao` troca o `perfilAcesso` de um usuário já ativo. Veterinário, agente e recepção não aceitam nem trocam tipo. A pessoa não altera a própria função no perfil.
+
+**Rationale:** Confirmado pelo autor em 2026-09-24.
+
+**Consequences:** A fila e a troca de tipo ficam em `/painel/acessos`. A spec está em `.ai-context/specs/autenticacao-jwt-rbac.md`. Desativar conta e editar CPF ou matrícula de outra pessoa continuam fora deste marco.
+
+## 2026-09-24 — Auth usa Prisma, menus iguais e sem e-mail
+
+**Status:** Accepted
+
+**Context:** O plano de autenticação deixou três assunções em aberto: o ORM, se agente e recepção veem seções diferentes, e se o aceite avisa por e-mail.
+
+**Decision:** O acesso ao Postgres deste marco é Prisma. `agente` e `recepcao` visualizam as mesmas seções do funcionário. Não há e-mail transacional. Aceite, recusa e troca de tipo aparecem quando a pessoa entra ou usa o painel.
+
+**Rationale:** Confirmado pelo autor em 2026-09-24. Um mapa de seções diferente, no futuro, altera só o mapa e o guard.
+
+**Consequences:** O plano está em `.ai-context/plans/autenticacao-jwt-rbac.md`. As tarefas estão em `.ai-context/tasks/autenticacao-jwt-rbac.md`.

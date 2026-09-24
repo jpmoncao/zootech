@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PerfilAcesso {
+  coordenacao
+  veterinario
+  agente
+  recepcao
+}
+
+enum StatusSolicitacao {
+  pendente
+  aceita
+  recusada
+}
+
+model Usuario {
+  id           Int          @id @default(autoincrement())
+  nome         String
+  email        String
+  senhaHash    String
+  cpf          String
+  telefone     String?
+  perfilAcesso PerfilAcesso
+  ativo        Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  funcionario           Funcionario?
+  refreshTokens         RefreshToken[]
+  solicitacoesDecididas Solicitacao[]    @relation("SolicitacaoDecisor")
+  auditoriaEventos      AuditoriaEvento[]
+
+  @@map("usuarios")
+}
+
+model Funcionario {
+  id        Int     @id @default(autoincrement())
+  usuarioId Int     @unique
+  matricula String
+  cargo     String
+  crmv      String?
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@map("funcionarios")
+}
+
+model Solicitacao {
+  id               Int               @id @default(autoincrement())
+  nome             String
+  cpf              String
+  matricula        String
+  email            String
+  funcaoPretendida PerfilAcesso
+  crmv             String?
+  senhaHash        String
+  status           StatusSolicitacao @default(pendente)
+  motivo           String?
+  decididoPorId    Int?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  decididoPor Usuario? @relation("SolicitacaoDecisor", fields: [decididoPorId], references: [id], onDelete: SetNull)
+
+  @@map("solicitacoes")
+}
+
+model RefreshToken {
+  id        Int       @id @default(autoincrement())
+  tokenHash String    @unique
+  usuarioId Int
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model AuditoriaEvento {
+  id        Int      @id @default(autoincrement())
+  tipo      String
+  dados     Json?
+  usuarioId Int?
+  createdAt DateTime @default(now())
+
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@map("auditoria_eventos")
+}
