@@ -884,20 +884,38 @@ p {
   min-height: 100%;
 }
 
+.baias-workbench {
+  overflow: clip;
+}
+
+.baias-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.baias-toolbar > .field {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+.baias-toolbar > .baias-search {
+  flex: 1.4 1 180px;
+}
+
+.baias-toolbar > .baias-clear {
+  flex: 0 1 auto;
+}
+
 .baias-workbench > .detail-empty,
 .baias-workbench > .inline-state {
   flex: 1;
 }
 
-.baias-toolbar {
-  display: grid;
-  grid-template-columns: minmax(220px, 1.4fr) minmax(140px, 0.75fr) minmax(150px, 0.9fr) auto auto;
-  gap: 12px;
-  align-items: end;
-}
-
-.baias-search {
-  min-width: 0;
+.baias-toolbar .view-switch,
+.baias-clear {
+  flex: 0 0 auto;
 }
 
 .search-wrap {
