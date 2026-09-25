@@ -2,13 +2,17 @@
 
 ## Current Focus
 
-Autenticação JWT concluída (tarefas 1–10). Gestão de baias concluída no escopo sem Animal: persistência, migração, API autenticada, contrato tipado no front, página de baias com lista/mapa, filtros, indicadores, formulário, detalhe, ocupantes vazios, ações, histórico, autorização por perfil, testes e validação manual. O domínio Animal/ocupação real ainda não existe.
+Autenticação JWT concluída (tarefas 1–10). Gestão de baias concluída no escopo inicial e agora integrada à ocupação real por animais na API. Gestão de animais tem persistência, API e front operacional: CRUD autenticado, regras de domínio, timeline, observações, pesagens, eventos, auditoria, revogação terminal, alocação de baias e galeria local. Ajustes de interface antes da tarefa 10: cadastro/edição em `Dialog`, combobox de raça, crop no cliente, caminho relativo de fotos, tooltip de alertas, rascunho da ficha, histórico no padrão das baias e filtros com `Select`.
 
 ## Active Tasks
 
+- Gestão de animais: spec `.ai-context/specs/gestao-de-animais.md`, plano `.ai-context/plans/gestao-de-animais.md`, tarefas `.ai-context/tasks/gestao-de-animais.md`.
+  - Status: tasks 1, 2, 3, 4, 5, 6, 7, 8 e 9 concluídas; ajustes de interface antes da task 10 concluídos; task 10 é o próximo passo.
+  - Notes: cadastro/edição em `Dialog` largo com etapas; raça em combobox (`Não informada`, SRD, catálogo, `Outra`); fotos com botão “Adicionar fotos”, crop quadrado no cliente (`react-easy-crop`) e `AlertDialog` para remoção. `FotoAnimal.caminhoAbsoluto` é relativo (`animais/{id}/{uuid}.webp`) e a API ancora `storage/media` em `apps/api`. Lista mostra só a quantidade de alertas, com descrição no `Tooltip`. Ficha tem baia/localização lado a lado, peso em destaque, rascunho com confirmação ao sair e histórico no padrão `history-list`. Filtros de animais e baias usam `Select`; baia filtra pelo código. Migration `20260924220000_foto_caminho_relativo` converte paths absolutos antigos.
+
 - Gestão de baias em `.ai-context/tasks/gestao-de-baias.md`.
   - Status: concluído no escopo aprovado
-  - Notes: a migration `gestao_baias` foi aplicada ao Postgres local. A página `/painel/baias` alterna lista/mapa usando os mesmos filtros e indicadores, permite cadastro/edição, detalhe, ações operacionais e histórico para Coordenação. Todos os perfis autenticados consultam baias; somente Coordenação faz CRUD, ações e histórico/auditoria. Validação manual feita em `http://localhost:3002/painel/baias` com login seed, cadastro de baia, busca, mapa, higienização e histórico. Ocupantes, isolamento real e bloqueios por ocupação dependem do modelo Animal.
+  - Notes: a migration `gestao_baias` foi aplicada ao Postgres local. A página `/painel/baias` alterna lista/mapa usando os mesmos filtros e indicadores, permite cadastro/edição, detalhe, ações operacionais e histórico para Coordenação. Todos os perfis autenticados consultam baias; somente Coordenação faz CRUD, ações e histórico/auditoria. Validação manual feita em `http://localhost:3002/painel/baias` com login seed, cadastro de baia, busca, mapa, higienização e histórico. A API já retorna ocupantes reais a partir de `Animal.baiaId`; o front de baias ainda precisa consumir animais reais quando a tela de animais chegar.
 
 - Autenticação em `.ai-context/tasks/autenticacao-jwt-rbac.md`.
   - Status: concluído
@@ -22,6 +26,36 @@ Autenticação JWT concluída (tarefas 1–10). Gestão de baias concluída no e
 
 ## Recent Changes
 
+- 2026-09-25
+  - Change: Fotos de animais passam a ser buscadas com o JWT da sessão e exibidas por blob URL. A tag `img` não enviava `Authorization` e a rota autenticada respondia 401.
+  - Reason: A galeria e a miniatura da lista apareciam quebradas mesmo com o arquivo salvo.
+- 2026-09-24
+  - Change: Ajustes de interface de animais antes da tarefa 10: modal de cadastro/edição, combobox de raça, crop no cliente, caminho relativo de fotos, tooltip de alertas, rascunho da ficha, histórico no padrão das baias e filtros com Select.
+  - Reason: Alinhar a operação de animais ao padrão visual das baias e evitar galeria quebrada quando a API sobe de outro diretório.
+- 2026-09-24
+  - Change: Task 9 de gestão de animais concluída com ficha dedicada operacional em `/painel/animais/[id]`: resumo, alertas acionáveis, edição inline dos dados que resolvem pendências, baia com link para `/painel/baias?baia=<id>`, galeria, pesagens, observações, exames/diagnósticos, histórico auditável e revogação terminal somente para Coordenação.
+  - Reason: Completar a consulta e acompanhamento operacional do animal antes da validação integrada.
+- 2026-09-24
+  - Change: Task 8 de gestão de animais concluída com assistente mobile de cadastro/edição em cinco etapas, criação mínima, edição de animais operacionais, seleção/busca de raça, inclusão rápida de raça personalizada, alocação opcional em baia e galeria com limite de 10 fotos e confirmação de remoção.
+  - Reason: Completar o fluxo operacional de entrada e complementação de animais antes da ficha dedicada.
+- 2026-09-24
+  - Change: Task 7 de gestão de animais concluída com listagem paginada, busca por nome/registro, filtros por espécie/situação/sexo/porte/castração/baia/sem baia/alertas/terminais, indicador textual de alertas e navegação para ficha dedicada.
+  - Reason: Completar a consulta operacional de animais antes do fluxo de cadastro/edição em etapas.
+- 2026-09-24
+  - Change: Task 6 de gestão de animais concluída com contrato web tipado para API `animais`, helpers `canViewAnimais`/`canManageAnimais`, lista inicial `/painel/animais`, ficha direta `/painel/animais/[id]`, estilos responsivos mínimos e regra de URL atualizada para rota segmentada de animais.
+  - Reason: Estabelecer navegação real e API client-side antes da listagem completa, cadastro e ficha operacional.
+- 2026-09-24
+  - Change: Task 5 de gestão de animais concluída com upload autenticado de fotos, crop quadrado até 1200 px, saída WebP até 5 MB, limite transacional de 10 fotos, rota controlada de entrega, remoção segura e limpeza de arquivo órfão. `sharp` foi adicionado à API e `ZOOTECH_MEDIA_ROOT` documenta a raiz gerenciada de mídia.
+  - Reason: Armazenamento local auditável e seguro para a galeria de animais antes das telas.
+- 2026-09-24
+  - Change: Task 4 de gestão de animais concluída com ocupação real entre animais e baias. `POST /animais/:id/alocacao` aloca, transfere ou retira animal; valida baia ativa, capacidade, exclusividade de isolamento e concorrência pela última vaga. Baias retornam ocupantes reais e bloqueiam redução de capacidade, exclusividade incompatível e ações em baia ocupada.
+  - Reason: Localização real e auditável do animal, substituindo ocupação simulada.
+- 2026-09-24
+  - Change: Tasks 2 e 3 de gestão de animais concluídas com módulo Nest `animais`, endpoints autenticados de CRUD/lista/detalhe/raças, observações, pesagens, eventos simples, timeline e revogação terminal por Coordenação. Testes Supertest cobrem quatro perfis, 401, duplicidade de registro, coerência espécie/raça, criação mínima, ausência de DELETE, estados terminais, autoria, histórico e auditoria.
+  - Reason: API inicial e timeline auditável para cadastro/acompanhamento de animais.
+- 2026-09-24
+  - Change: Task 1 de gestão de animais concluída com modelo Prisma, migration `gestao_animais` e seed idempotente de raças. A migration foi aplicada localmente; `prisma generate`, typecheck API e seed duplo passaram, incluindo verificação temporária de preservação de raça personalizada.
+  - Reason: Base de persistência para o CRUD de animais.
 - 2026-09-24
   - Change: Baias, perfil e acessos usam skeleton no carregamento. A baia aberta fica em `/painel/baias?baia=<id>` e o detalhe consulta `obterBaia` com esse id. Skeleton e tons de informação estão em `DESIGN.md`. O id na URL continua em `.cursor/rules/front-url-recurso.mdc`.
   - Reason: Convenção de front para espera visual e consulta pelo id da URL.
@@ -70,15 +104,13 @@ Autenticação JWT concluída (tarefas 1–10). Gestão de baias concluída no e
 
 ## Blockers
 
-- Definir elegibilidade de isolamento e vínculo/fluxo de ocupantes antes do módulo Animal.
-  - Impact: a API atual não pode verificar compatibilidade de ocupantes nem recusar ações por baia ocupada enquanto não existe modelo Animal.
-  - Next action: definir essas regras no início do cadastro/acolhimento de animais.
+
 - Nenhum bloqueio na autenticação. Agente e recepção veem as mesmas seções, de propósito, até um mapa novo ser pedido.
 
 ## Next Steps
 
-1. Escrever a spec do painel ADM (UC02–UC10 e auditoria) em cima da identidade já registrada.
-2. Implementar o domínio a partir dessa spec.
+1. Implementar task 10 de gestão de animais: validação integrada, ajustes finais e atualização de contexto durável.
+2. Especificar demais funcionalidades do painel ADM (UC02–UC10 e auditoria) que ainda não têm spec.
 
 ## Things To Remember
 

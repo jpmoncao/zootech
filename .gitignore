@@ -17,3 +17,5 @@ Thumbs.db
 .vscode/
 .idea/
 coverage/
+apps/api/storage/media/**
+!apps/api/storage/media/.gitkeep

@@ -4,7 +4,7 @@ import { NestFactory } from "@nestjs/core";
 import cookieParser from "cookie-parser";
 import { AppModule } from "./app.module";
 import { PrismaService } from "./prisma/prisma.service";
-import { seedCoordenacao } from "./seed";
+import { seedCoordenacao, seedRacasAnimais } from "./seed";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -25,6 +25,7 @@ async function bootstrap() {
   }
 
   await seedCoordenacao(app.get(PrismaService), config);
+  await seedRacasAnimais(app.get(PrismaService));
 
   await app.listen(port, "0.0.0.0");
 }

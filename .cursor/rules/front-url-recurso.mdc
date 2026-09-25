@@ -8,7 +8,8 @@ alwaysApply: false
 
 A tela que abre um registro lê o id na URL e consulta a API com esse id. A seleção não fica só em `useState`.
 
-- Coleção em `/painel/<recurso>`. Registro aberto em `/painel/<recurso>?baia=12`, com o nome do recurso no parâmetro (`baia`, `animal`, `usuario`).
+- Coleção em `/painel/<recurso>`. Quando houver ficha segmentada definida, use `/painel/<recurso>/<id>`; animais usa `/painel/animais/[id]`.
+- Quando a tela ainda trabalha com painel lateral na coleção, registro aberto em `/painel/<recurso>?baia=12`, com o nome do recurso no parâmetro (`baia`, `usuario`).
 - Ao escolher um item, grave o id com `router.replace`, sem rolar a página. Ao abrir a URL de novo, a mesma consulta roda.
 - Não selecione o primeiro item da lista sozinho. Sem id na URL, não há painel de detalhe.
 - Id ausente ou inválido não dispara consulta. Falha da API aparece no `Alert`; o id permanece na URL.
@@ -19,5 +20,13 @@ const id = Number(searchParams.get("baia"));
 useEffect(() => {
   if (!Number.isInteger(id)) return;
   void obterBaia(id).then(setBaia);
+}, [id]);
+```
+
+```tsx
+const { id } = useParams<{ id: string }>();
+useEffect(() => {
+  if (!/^\d+$/.test(id)) return;
+  void obterAnimal(Number(id)).then(setAnimal);
 }, [id]);
 ```

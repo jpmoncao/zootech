@@ -25,7 +25,8 @@
     "class-validator": "^0.14.2",
     "cookie-parser": "^1.4.7",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2"
+    "rxjs": "^7.8.2",
+    "sharp": "^0.35.4"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.10",
@@ -34,6 +35,7 @@
     "@types/cookie-parser": "^1.4.9",
     "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
+    "@types/multer": "^2.2.0",
     "@types/node": "^22.18.6",
     "@types/supertest": "^6.0.3",
     "jest": "^30.1.3",

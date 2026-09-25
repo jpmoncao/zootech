@@ -44,3 +44,11 @@ export function canManageBaias(perfil: PerfilAcesso): boolean {
 export function canViewBaiasAudit(perfil: PerfilAcesso): boolean {
   return perfil === "coordenacao";
 }
+
+export function canViewAnimais(perfil: PerfilAcesso): boolean {
+  return todos.includes(perfil);
+}
+
+export function canManageAnimais(perfil: PerfilAcesso): boolean {
+  return todos.includes(perfil);
+}

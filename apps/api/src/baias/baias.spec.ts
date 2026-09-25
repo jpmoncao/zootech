@@ -244,6 +244,68 @@ describe("baias authorization", () => {
     );
   });
 
+  it("mostra ocupação real e bloqueia capacidade/ações incompatíveis em baia ocupada", async () => {
+    const token = tokens.get("coordenacao")!;
+    const baia = await criarBaiaComoCoordenacao();
+    const animal = await prisma.animal.create({
+      data: {
+        nome: `Ocupante ${STAMP}`,
+        numeroRegistro: `BAIAS-${STAMP}-${seq}`,
+        numeroRegistroNormalizado: `baias-${STAMP}-${seq}`,
+        especie: "cao",
+        sexo: "nao_informado",
+        baiaId: baia.id,
+      },
+    });
+    await prisma.animal.create({
+      data: {
+        nome: `Ocupante Extra ${STAMP}`,
+        numeroRegistro: `BAIAS-${STAMP}-${seq}-extra`,
+        numeroRegistroNormalizado: `baias-${STAMP}-${seq}-extra`,
+        especie: "cao",
+        sexo: "nao_informado",
+        baiaId: baia.id,
+      },
+    });
+
+    const detalhe = await request(app.getHttpServer())
+      .get(`/baias/${baia.id}`)
+      .set(auth(token))
+      .expect(200);
+
+    expect(detalhe.body.ocupacao).toBe(2);
+    expect(detalhe.body.vagasDisponiveis).toBe(0);
+    expect(detalhe.body.ocupantes.map((ocupante: { id: number }) => ocupante.id)).toContain(animal.id);
+
+    await request(app.getHttpServer())
+      .patch(`/baias/${baia.id}`)
+      .set(auth(token))
+      .send({ tipo: "individual", capacidade: 1 })
+      .expect(409);
+
+    await request(app.getHttpServer())
+      .patch(`/baias/${baia.id}`)
+      .set(auth(token))
+      .send({ exclusivaIsolamento: true })
+      .expect(409);
+
+    await request(app.getHttpServer())
+      .post(`/baias/${baia.id}/acoes/interditar`)
+      .set(auth(token))
+      .send({})
+      .expect(409);
+    await request(app.getHttpServer())
+      .post(`/baias/${baia.id}/acoes/iniciar_higienizacao`)
+      .set(auth(token))
+      .send({})
+      .expect(409);
+    await request(app.getHttpServer())
+      .post(`/baias/${baia.id}/acoes/inativar`)
+      .set(auth(token))
+      .send({})
+      .expect(409);
+  });
+
   it("nega CRUD, ações operacionais e auditoria para perfis sem coordenação", async () => {
     const baia = await criarBaiaComoCoordenacao();
 
@@ -366,6 +428,10 @@ async function cleanup(prisma: PrismaClient) {
     });
     await prisma.usuario.deleteMany({ where: { id: { in: ids } } });
   }
+
+  await prisma.animal.deleteMany({
+    where: { numeroRegistroNormalizado: { startsWith: `baias-${STAMP}` } },
+  });
 
   await prisma.baia.deleteMany({
     where: { codigoNormalizado: { startsWith: `AUT-${STAMP}` } },

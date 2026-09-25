@@ -41,15 +41,27 @@ Responsável pelo animal depois da adoção. Herda de `Usuario` e tem endereço,
 
 ### Animal
 
-Animal acompanhado pelo CCZ: nome, espécie, raça, sexo, porte, cor, microchip e status de acolhimento. Ocupa exatamente uma baia. Pode ser transferido. Nasce sem tutor.
+Animal acompanhado pelo CCZ: identificação, fotos, espécie/raça, características, situação, indicador clínico independente `emIsolamento`, cuidados e histórico auditável. Pode ocupar zero ou uma baia; sem baia deve ficar destacado para readequação. Nasce sem tutor; tutor entra na adoção. Situações iniciais: em tratamento, em quarentena/observação, saudável, adotado e óbito.
+
+### Foto do animal
+
+Imagem da galeria do animal. O recorte quadrado acontece no front; a API aceita JPEG/JPG, PNG e WebP já recortados, valida o quadrado, gera saída WebP até 1200×1200 px, comprime para até 5 MB e limita a 10 fotos por animal. Arquivos ficam em `apps/api/storage/media` (ou `ZOOTECH_MEDIA_ROOT`/`MEDIA_ROOT`) com caminho relativo `animais/{id}/{uuid}.webp` e são servidos por rota controlada, sem expor o path no JSON.
+
+### Raça do animal
+
+Catálogo por espécie (`cao` ou `gato`) com nome de exibição e nome normalizado em Unicode NFC, trim, espaços colapsados e comparação sem distinção de caixa. O seed padrão cria 59 entradas entre cães e gatos, incluindo SRD, Outra e Não Informada, sem remover raças personalizadas.
 
 ### Baia
 
-Local que abriga zero ou mais animais. Todo animal está em exatamente uma baia e pode ser transferido. O cadastro persiste código único sem distinção de caixa, setor (canil, gatil ou quarentena), tipo (coletiva ou individual), capacidade, área opcional, solário, exclusividade para isolamento, última higienização opcional e estado operacional (ativa, inativa, interditada ou em higienização). A relação de ocupantes será adicionada com o domínio Animal. Regras e fluxos estão em `.ai-context/specs/gestao-de-baias.md`.
+Local que abriga zero ou mais animais. Cada animal ocupa zero ou uma baia e pode ser alocado, transferido ou ficar sem baia durante tratamento. O cadastro persiste código único sem distinção de caixa, setor (canil, gatil ou quarentena), tipo (coletiva ou individual), capacidade, área opcional, solário, exclusividade para isolamento, última higienização opcional e estado operacional (ativa, inativa, interditada ou em higienização). A API calcula ocupantes, ocupação e vagas disponíveis a partir de `Animal.baiaId`. Regras e fluxos estão em `.ai-context/specs/gestao-de-baias.md`.
 
 ### Auditoria
 
-Registro consultável pelo ADM/Coordenação. Eventos de baias usam `AuditoriaEvento` com `dados.entidade = "baia"` e `dados.entidadeId`, cobrindo criação, edição, interdição/liberação, inativação/reativação e higienização. A transferência de baia não tem histórico próprio separado deste registro, até que isso seja pedido.
+Registro consultável pelo ADM/Coordenação no escopo administrativo e pela ficha do domínio quando aplicável. Eventos de baias usam `AuditoriaEvento` com `dados.entidade = "baia"` e `dados.entidadeId`, cobrindo criação, edição, interdição/liberação, inativação/reativação e higienização. Eventos de animais usam `dados.entidade = "animal"` e `dados.entidadeId`, cobrindo criação, edição, observação, pesagem, evento simples, mudança de baia, foto adicionada/removida e revogação terminal.
+
+### Timeline do animal
+
+Histórico cronológico reverso em `EventoAnimal`, alimentado por criação, edição, mudança de situação, mudança de baia, observação, pesagem, exame, diagnóstico e revogação de situação terminal. Observações e pesagens também têm tabelas append-only próprias; o evento dá a visão unificada da ficha.
 
 ### Prontuário
 

@@ -38,6 +38,66 @@ enum EstadoBaia {
   em_higienizacao
 }
 
+enum EspecieAnimal {
+  cao
+  gato
+}
+
+enum TipoRacaAnimal {
+  catalogo
+  srd
+  outra
+  nao_informada
+  personalizada
+}
+
+enum SexoAnimal {
+  macho
+  femea
+  nao_informado
+}
+
+enum PorteAnimal {
+  pequeno
+  medio
+  grande
+  nao_informado
+}
+
+enum SituacaoAnimal {
+  em_tratamento
+  em_quarentena_observacao
+  saudavel
+  adotado
+  obito
+}
+
+enum StatusCastracaoAnimal {
+  sim
+  nao
+  nao_informado
+}
+
+enum UnidadeIdadeAnimal {
+  dias
+  meses
+  anos
+}
+
+enum TipoEventoAnimal {
+  criacao
+  edicao
+  acolhimento
+  mudanca_situacao
+  mudanca_baia
+  pesagem
+  observacao
+  foto
+  exame
+  diagnostico
+  revogacao_situacao_terminal
+}
+
 model Usuario {
   id           Int          @id @default(autoincrement())
   nome         String
@@ -52,8 +112,12 @@ model Usuario {
 
   funcionario           Funcionario?
   refreshTokens         RefreshToken[]
-  solicitacoesDecididas Solicitacao[]    @relation("SolicitacaoDecisor")
+  solicitacoesDecididas Solicitacao[]      @relation("SolicitacaoDecisor")
   auditoriaEventos      AuditoriaEvento[]
+  animaisCriados        Animal[]           @relation("AnimalCriador")
+  pesagensAnimais       PesagemAnimal[]
+  observacoesAnimais    ObservacaoAnimal[]
+  eventosAnimais        EventoAnimal[]
 
   @@map("usuarios")
 }
@@ -114,20 +178,147 @@ model AuditoriaEvento {
 }
 
 model Baia {
-  id                    Int       @id @default(autoincrement())
-  codigo                String
-  codigoNormalizado     String    @unique
-  setor                 SetorBaia
-  tipo                  TipoBaia
-  capacidade            Int
-  areaM2                Decimal?  @db.Decimal(8, 2)
-  possuiSolario         Boolean   @default(false)
-  exclusivaIsolamento   Boolean   @default(false)
-  estado                EstadoBaia @default(ativa)
-  ultimaHigienizacaoEm  DateTime?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  id                   Int        @id @default(autoincrement())
+  codigo               String
+  codigoNormalizado    String     @unique
+  setor                SetorBaia
+  tipo                 TipoBaia
+  capacidade           Int
+  areaM2               Decimal?   @db.Decimal(8, 2)
+  possuiSolario        Boolean    @default(false)
+  exclusivaIsolamento  Boolean    @default(false)
+  estado               EstadoBaia @default(ativa)
+  ultimaHigienizacaoEm DateTime?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  animais Animal[]
 
   @@index([setor, estado])
   @@map("baias")
+}
+
+model RacaAnimal {
+  id              Int            @id @default(autoincrement())
+  especie         EspecieAnimal
+  nome            String
+  nomeNormalizado String
+  tipo            TipoRacaAnimal @default(personalizada)
+  catalogoPadrao  Boolean        @default(false)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  animais Animal[]
+
+  @@unique([especie, nomeNormalizado])
+  @@index([especie, tipo])
+  @@map("racas_animais")
+}
+
+model Animal {
+  id                        Int                   @id @default(autoincrement())
+  nome                      String
+  numeroRegistro            String
+  numeroRegistroNormalizado String                @unique
+  especie                   EspecieAnimal
+  racaId                    Int?
+  sexo                      SexoAnimal            @default(nao_informado)
+  porte                     PorteAnimal           @default(nao_informado)
+  corPelagem                String?
+  situacao                  SituacaoAnimal        @default(em_tratamento)
+  emIsolamento              Boolean               @default(false)
+  castrado                  StatusCastracaoAnimal @default(nao_informado)
+  pesoAtualKg               Decimal?              @db.Decimal(7, 3)
+  dataAcolhimento           DateTime?
+  dataNascimento            DateTime?
+  idadeEstimadaQuantidade   Int?
+  idadeEstimadaUnidade      UnidadeIdadeAnimal?
+  idadeAproximada           Boolean               @default(false)
+  nasceuNoCcz               Boolean               @default(false)
+  baiaId                    Int?
+  criadoPorId               Int?
+  acolhidoPor               String?
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @updatedAt
+
+  raca        RacaAnimal?        @relation(fields: [racaId], references: [id], onDelete: SetNull)
+  baia        Baia?              @relation(fields: [baiaId], references: [id], onDelete: SetNull)
+  criadoPor   Usuario?           @relation("AnimalCriador", fields: [criadoPorId], references: [id], onDelete: SetNull)
+  fotos       FotoAnimal[]
+  pesagens    PesagemAnimal[]
+  observacoes ObservacaoAnimal[]
+  eventos     EventoAnimal[]
+
+  @@index([especie, situacao])
+  @@index([baiaId])
+  @@index([racaId])
+  @@map("animais")
+}
+
+model FotoAnimal {
+  id              Int      @id @default(autoincrement())
+  animalId        Int
+  caminhoAbsoluto String
+  nomeArquivo     String
+  mimeType        String
+  tamanhoBytes    Int
+  largura         Int
+  altura          Int
+  identificacao   Boolean  @default(false)
+  ordem           Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  animal Animal @relation(fields: [animalId], references: [id], onDelete: Cascade)
+
+  @@index([animalId, ordem])
+  @@map("fotos_animais")
+}
+
+model PesagemAnimal {
+  id         Int      @id @default(autoincrement())
+  animalId   Int
+  valorKg    Decimal  @db.Decimal(7, 3)
+  observacao String?
+  usuarioId  Int?
+  createdAt  DateTime @default(now())
+
+  animal  Animal   @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([animalId, createdAt])
+  @@map("pesagens_animais")
+}
+
+model ObservacaoAnimal {
+  id                 Int      @id @default(autoincrement())
+  animalId           Int
+  texto              String
+  usuarioId          Int?
+  observacaoOrigemId Int?
+  createdAt          DateTime @default(now())
+
+  animal           Animal             @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  usuario          Usuario?           @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  observacaoOrigem ObservacaoAnimal?  @relation("CorrecoesObservacaoAnimal", fields: [observacaoOrigemId], references: [id], onDelete: SetNull)
+  correcoes        ObservacaoAnimal[] @relation("CorrecoesObservacaoAnimal")
+
+  @@index([animalId, createdAt])
+  @@map("observacoes_animais")
+}
+
+model EventoAnimal {
+  id        Int              @id @default(autoincrement())
+  animalId  Int
+  tipo      TipoEventoAnimal
+  resumo    String
+  dados     Json?
+  usuarioId Int?
+  createdAt DateTime         @default(now())
+
+  animal  Animal   @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([animalId, createdAt])
+  @@index([tipo, createdAt])
+  @@map("eventos_animais")
 }

@@ -28,7 +28,7 @@ Confirmadas como domínio, ainda não implementadas:
 - Cadastro e gestão de usuários e funcionários, exclusivos do ADM.
 - Registro de auditoria consultável pelo ADM.
 
-O animal sempre está em uma baia e pode ser transferido. Ele nasce sem tutor e só recebe tutor na adoção.
+O animal pode estar sem baia durante tratamento; ficha deve destacar a pendência de alocação. Pode ser transferido e nasce sem tutor; só recebe tutor na adoção.
 
 ## Important Links
 

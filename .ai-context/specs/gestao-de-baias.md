@@ -43,7 +43,7 @@ A equipe precisa saber onde cada animal está, qual é a capacidade e condição
 - Código é obrigatório e único.
 - Capacidade é inteiro maior ou igual a 1. Baia individual tem capacidade exatamente 1; baia coletiva tem capacidade de pelo menos 1, sem máximo global definido nesta spec.
 - A baia também possui um estado operacional: ativa (padrão), inativa, interditada ou em higienização. Estados e transições são mantidos pelo sistema, não definidos como campos livremente editáveis no formulário.
-- Exclusividade para isolamento restringe alocação a animais que estejam em isolamento, de acordo com o estado/dado de isolamento mantido pelo domínio de animais.
+- Exclusividade para isolamento restringe alocação a animais cujo campo clínico explícito `emIsolamento` esteja ativo. Esse indicador é independente da situação geral do animal.
 - Baia inativa, interditada ou em higienização não aceita novos ocupantes.
 - Exclusão física não é permitida quando houver histórico ou ocupantes; o registro deve ser inativado para preservar rastreabilidade.
 - Alterar a capacidade para valor inferior ao número de ocupantes é recusado.
@@ -68,12 +68,12 @@ A equipe precisa saber onde cada animal está, qual é a capacidade e condição
 
 - Exibir a relação dos animais atualmente alocados à baia.
 - A aplicação de uma alocação deve validar capacidade, estado operacional e regra de isolamento de forma atômica.
-- Um animal ocupa exatamente uma baia por vez. Alocação/transferência atualiza origem e destino sem duplicidade nem período sem baia.
+- Um animal pode não ocupar baia, inclusive temporariamente durante tratamento; quando alocado, ocupa no máximo uma baia por vez. Alocação/transferência/saída atualiza origem e destino sem duplicidade e registra o evento do animal.
 - A gestão completa de transferências entre baias pertence ao fluxo de animais; este módulo deve atualizar sua exibição e gerar eventos de auditoria da baia de origem e destino.
 
 ### Auditoria
 
-- Cada baia tem histórico cronológico, do mais recente para o mais antigo, contendo eventos de criação, edição, alocação/saída de animal, interdição/liberação, inativação/reativação e higienização.
+- Cada baia tem histórico cronológico, do mais recente para o mais antigo, contendo eventos de criação, edição, alocação/saída de animal, interdição/liberação, inativação/reativação e higienização. O animal sem baia continua visível no módulo de animais com alerta e ação de alocação.
 - Cada evento inclui data/hora, usuário responsável, tipo de ação e resumo dos dados alterados. Para edição, registrar campos alterados e valores anterior/novo relevantes.
 - Eventos de auditoria são imutáveis e não podem ser removidos pela interface.
 - A trilha deve ser consultável pela Coordenação e respeitar autorização de auditoria já definida no sistema.
@@ -91,7 +91,7 @@ A equipe precisa saber onde cada animal está, qual é a capacidade e condição
 9. Dado um usuário autorizado, quando criar ou editar uma baia, então o evento correspondente aparece no histórico com responsável, instante e resumo das mudanças.
 10. Dado um evento de auditoria registrado, quando alguém tentar removê-lo pela interface, então nenhuma operação de remoção é oferecida.
 11. Dada qualquer combinação de filtros de setor, estado e busca por código, quando aplicada na lista ou mapa, então ambas as visualizações exibem o mesmo conjunto de baias correspondente.
-12. Dada uma transferência válida, quando concluída, então o animal aparece apenas na baia de destino, os totais de ocupação são atualizados e origem/destino registram os eventos relacionados.
+12. Dada uma alocação ou transferência válida, quando concluída, então o animal aparece apenas na baia de destino; uma saída sem destino deixa-o sem baia. Totais de ocupação atualizam e baias/animal registram eventos relacionados.
 13. Dado um usuário sem autorização para administrar baias ou ver auditoria, quando tentar acessar a operação, então o acesso é negado conforme RBAC.
 
 ## Edge Cases
@@ -134,7 +134,7 @@ A equipe precisa saber onde cada animal está, qual é a capacidade e condição
 4. Higienização pode começar com animais presentes? Recomendação: não, exigir baia vazia.
 5. Uma baia inativa/interditada pode ser reativada diretamente ou há fluxo de inspeção/liberação?
 6. Existe máximo de capacidade para baias coletivas ou limite configurável por setor/espécie?
-7. Como determinar elegibilidade para baia exclusiva para isolamento (campo do animal, status clínico ou ambos)?
+7. ~~Como determinar elegibilidade para baia exclusiva para isolamento?~~ Respondida: campo clínico explícito `emIsolamento`, independente da situação geral do animal.
 8. Área usa qual unidade e precisão (m² recomendado)?
 9. Auditoria deve permitir filtros por período, ação e responsável, além da consulta por baia?
 

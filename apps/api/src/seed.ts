@@ -17,6 +17,94 @@ type EnvReader = {
   get(key: string): string | undefined;
 };
 
+type RacaSeed = {
+  especie: "cao" | "gato";
+  nome: string;
+  tipo: "catalogo" | "srd" | "outra" | "nao_informada";
+};
+
+const RACAS_CAES = [
+  "SRD (Sem Raça Definida)",
+  "Akita",
+  "Basset Hound",
+  "Beagle",
+  "Border Collie",
+  "Boxer",
+  "Buldogue Francês",
+  "Buldogue Inglês",
+  "Bull Terrier",
+  "Cane Corso",
+  "Chihuahua",
+  "Chow Chow",
+  "Cocker Spaniel",
+  "Dachshund",
+  "Dálmata",
+  "Doberman",
+  "Dogo Argentino",
+  "Fila Brasileiro",
+  "Golden Retriever",
+  "Husky Siberiano",
+  "Labrador Retriever",
+  "Lhasa Apso",
+  "Maltês",
+  "Mastim Napolitano",
+  "Pastor Alemão",
+  "Pastor Belga",
+  "Pinscher",
+  "Pit Bull (American Pit Bull Terrier)",
+  "Poodle",
+  "Pug",
+  "Rottweiler",
+  "Schnauzer",
+  "Shih Tzu",
+  "Spitz Alemão (Lulu da Pomerânia)",
+  "Staffordshire Bull Terrier",
+  "Yorkshire Terrier",
+] as const;
+
+const RACAS_GATOS = [
+  "SRD (Sem Raça Definida)",
+  "Abissínio",
+  "Angorá",
+  "Azul Russo",
+  "Bengal",
+  "Bobtail",
+  "British Shorthair (Pelo Curto Inglês)",
+  "Burmês",
+  "Exótico",
+  "Himalaio",
+  "Maine Coon",
+  "Munchkin",
+  "Persa",
+  "Ragdoll",
+  "Savannah",
+  "Scottish Fold",
+  "Siamês",
+  "Siberiano",
+  "Sphynx",
+] as const;
+
+const RACAS_PADRAO: RacaSeed[] = [
+  ...RACAS_CAES.map((nome) => ({
+    especie: "cao" as const,
+    nome,
+    tipo: nome.startsWith("SRD") ? ("srd" as const) : ("catalogo" as const),
+  })),
+  { especie: "cao", nome: "Outra", tipo: "outra" },
+  { especie: "cao", nome: "Não Informada", tipo: "nao_informada" },
+  ...RACAS_GATOS.map((nome) => ({
+    especie: "gato" as const,
+    nome,
+    tipo: nome.startsWith("SRD") ? ("srd" as const) : ("catalogo" as const),
+  })),
+  { especie: "gato", nome: "Outra", tipo: "outra" },
+  { especie: "gato", nome: "Não Informada", tipo: "nao_informada" },
+];
+
+function normalizarNomeCatalogo(nome: string): string {
+  return nome.normalize("NFC").trim().replace(/\s+/g, " ").toLocaleLowerCase("pt-BR");
+}
+
 export async function seedCoordenacao(
   prisma: PrismaClient,
   config: EnvReader,
@@ -69,6 +157,45 @@ export async function seedCoordenacao(
   }
 }
 
+export async function seedRacasAnimais(prisma: PrismaClient): Promise<void> {
+  const logger = new Logger("SeedRacasAnimais");
+
+  try {
+    await prisma.$transaction(
+      RACAS_PADRAO.map((raca) => {
+        const nome = raca.nome.normalize("NFC").trim().replace(/\s+/g, " ");
+
+        return prisma.racaAnimal.upsert({
+          where: {
+            especie_nomeNormalizado: {
+              especie: raca.especie,
+              nomeNormalizado: normalizarNomeCatalogo(nome),
+            },
+          },
+          create: {
+            especie: raca.especie,
+            nome,
+            nomeNormalizado: normalizarNomeCatalogo(nome),
+            tipo: raca.tipo,
+            catalogoPadrao: true,
+          },
+          update: {
+            nome,
+            tipo: raca.tipo,
+            catalogoPadrao: true,
+          },
+        });
+      }),
+    );
+
+    logger.log(`Catálogo de raças sincronizado (${RACAS_PADRAO.length} entradas).`);
+  } catch (error) {
+    logger.warn(
+      `Seed de raças ignorado: banco indisponível, migration pendente ou falha ao gravar. ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
 function loadLocalEnv(path: string) {
   if (!existsSync(path)) return;
   for (const line of readFileSync(path, "utf8").split("\n")) {
@@ -95,6 +222,7 @@ async function main() {
     await seedCoordenacao(prisma, {
       get: (key) => process.env[key],
     });
+    await seedRacasAnimais(prisma);
   } finally {
     await prisma.$disconnect();
   }

@@ -13,6 +13,16 @@ import { ListBaiasDto } from "./dto/list-baias.dto";
 import { UpdateBaiaDto } from "./dto/update-baia.dto";
 
 const normalize = (codigo: string) => codigo.trim().toLocaleUpperCase("pt-BR");
+const OCUPANTE_SELECT = {
+  id: true,
+  nome: true,
+  numeroRegistro: true,
+  especie: true,
+  situacao: true,
+  emIsolamento: true,
+} satisfies Prisma.AnimalSelect;
+
+type BaiaComOcupantes = Prisma.BaiaGetPayload<{ include: { animais: { select: typeof OCUPANTE_SELECT } } }>;
 
 @Injectable()
 export class BaiasService {
@@ -24,8 +34,10 @@ export class BaiasService {
     return baia;
   }
 
-  private view<T extends { id: number }>(baia: T) {
-    return { ...baia, ocupantes: [], ocupacao: 0, vagasDisponiveis: (baia as T & { capacidade: number }).capacidade };
+  private view(baia: BaiaComOcupantes) {
+    const ocupacao = baia.animais.length;
+    const { animais, ...dados } = baia;
+    return { ...dados, ocupantes: animais, ocupacao, vagasDisponiveis: Math.max(baia.capacidade - ocupacao, 0) };
   }
 
   async listar(filtros: ListBaiasDto) {
@@ -34,12 +46,19 @@ export class BaiasService {
       ...(filtros.estado ? { estado: filtros.estado } : {}),
       ...(filtros.busca?.trim() ? { codigoNormalizado: { contains: normalize(filtros.busca) } } : {}),
     };
-    const baias = await this.prisma.baia.findMany({ where, orderBy: [{ setor: "asc" }, { codigoNormalizado: "asc" }] });
+    const baias = await this.prisma.baia.findMany({
+      where,
+      include: { animais: { select: OCUPANTE_SELECT, orderBy: [{ nome: "asc" }, { id: "asc" }] } },
+      orderBy: [{ setor: "asc" }, { codigoNormalizado: "asc" }],
+    });
     return baias.map((baia) => this.view(baia));
   }
 
   async obter(id: number) {
-    const baia = await this.prisma.baia.findUnique({ where: { id } });
+    const baia = await this.prisma.baia.findUnique({
+      where: { id },
+      include: { animais: { select: OCUPANTE_SELECT, orderBy: [{ nome: "asc" }, { id: "asc" }] } },
+    });
     if (!baia) throw new NotFoundException("Baia não encontrada.");
     return this.view(baia);
   }
@@ -67,7 +86,7 @@ export class BaiasService {
           codigo, codigoNormalizado: normalize(codigo), setor: dto.setor, tipo: dto.tipo,
           capacidade: dto.capacidade, areaM2: dto.areaM2, possuiSolario: dto.possuiSolario ?? false,
           exclusivaIsolamento: dto.exclusivaIsolamento ?? false,
-        } });
+        }, include: { animais: { select: OCUPANTE_SELECT } } });
         await this.audit(tx, ator, baia.id, "baia_criada", { depois: this.snapshot(baia) });
         return this.view(baia);
       });
@@ -79,11 +98,17 @@ export class BaiasService {
     return this.prisma.$transaction(async (tx) => {
       const atual = await tx.baia.findUnique({ where: { id } });
       if (!atual) throw new NotFoundException("Baia não encontrada.");
-      const ocupacao = 0; // Ocupação será ligada ao domínio Animal, ainda não criado.
+      const ocupacao = await tx.animal.count({ where: { baiaId: id } });
       const tipo = dto.tipo ?? atual.tipo;
       const capacidade = dto.capacidade ?? atual.capacidade;
       this.validarCapacidade(tipo, capacidade);
       if (capacidade < ocupacao) throw new ConflictException("Capacidade não pode ser menor que a ocupação atual.");
+      if (dto.exclusivaIsolamento === true) {
+        const incompatíveis = await tx.animal.count({ where: { baiaId: id, emIsolamento: false } });
+        if (incompatíveis > 0) {
+          throw new ConflictException("Baia ocupada por animal sem isolamento não pode virar exclusiva de isolamento.");
+        }
+      }
       const codigo = dto.codigo?.trim() ?? atual.codigo;
       if (!codigo) throw new BadRequestException("Código é obrigatório.");
       const atualizada = await tx.baia.update({ where: { id }, data: {
@@ -92,7 +117,7 @@ export class BaiasService {
         ...(dto.capacidade !== undefined ? { capacidade } : {}), ...(dto.areaM2 !== undefined ? { areaM2: dto.areaM2 } : {}),
         ...(dto.possuiSolario !== undefined ? { possuiSolario: dto.possuiSolario } : {}),
         ...(dto.exclusivaIsolamento !== undefined ? { exclusivaIsolamento: dto.exclusivaIsolamento } : {}),
-      } });
+      }, include: { animais: { select: OCUPANTE_SELECT, orderBy: [{ nome: "asc" }, { id: "asc" }] } } });
       await this.audit(tx, ator, id, "baia_editada", { antes: this.snapshot(atual), depois: this.snapshot(atualizada) });
       return this.view(atualizada);
     }).catch((error) => this.mapUnique(error));
@@ -111,12 +136,14 @@ export class BaiasService {
       const atual = await tx.baia.findUnique({ where: { id } });
       if (!atual) throw new NotFoundException("Baia não encontrada.");
       if (!transition.from.includes(atual.estado)) throw new ConflictException(`Não é possível executar ${acao} no estado ${atual.estado}.`);
-      // The Animal relation is intentionally deferred; occupancy checks join that domain.
+      if (["interditar", "inativar", "iniciar_higienizacao"].includes(acao)) {
+        await this.assertVazia(tx, id, `Não é possível executar ${acao} em baia ocupada.`);
+      }
       const result = await tx.baia.updateMany({ where: { id, estado: atual.estado }, data: { estado: transition.to } });
       if (result.count !== 1) throw new ConflictException("A baia foi alterada por outra operação. Atualize e tente novamente.");
       const nova = { ...atual, estado: transition.to };
       await this.audit(tx, ator, id, `baia_${acao}`, { estadoAnterior: atual.estado, estadoNovo: transition.to, observacao: dto.observacao ?? null });
-      return this.view(nova);
+      return this.view({ ...nova, animais: [] });
     });
   }
 
@@ -130,8 +157,13 @@ export class BaiasService {
       if (result.count !== 1) throw new ConflictException("A baia foi alterada por outra operação. Atualize e tente novamente.");
       const nova = { ...atual, estado: "ativa" as const, ultimaHigienizacaoEm: agora };
       await this.audit(tx, ator, id, "baia_higienizacao_concluida", { estadoAnterior: atual.estado, estadoNovo: "ativa", ultimaHigienizacaoEm: agora.toISOString(), observacao: dto.observacao ?? null });
-      return this.view(nova);
+      return this.view({ ...nova, animais: [] });
     });
+  }
+
+  private async assertVazia(tx: Prisma.TransactionClient, id: number, message: string) {
+    const ocupacao = await tx.animal.count({ where: { baiaId: id } });
+    if (ocupacao > 0) throw new ConflictException(message);
   }
 
   private validarCapacidade(tipo: string, capacidade: number) {

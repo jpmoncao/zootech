@@ -13,9 +13,11 @@ import {
   RefreshCw,
   Search,
   ShieldAlert,
+  SlidersHorizontal,
   Sparkles,
   X,
 } from "lucide-react";
+import { ControlSelect } from "@/components/control-select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -301,73 +303,73 @@ function BaiasToolbar({
   onView: (view: ViewMode) => void;
 }) {
   const temFiltro = Boolean(filtros.busca?.trim() || filtros.setor || filtros.estado);
+  const [filtrosAbertos, setFiltrosAbertos] = useState(Boolean(filtros.setor || filtros.estado));
+  const FILTER_ALL = "__all__";
 
   return (
-    <div className="baias-toolbar">
-      <div className="field baias-search">
-        <Label htmlFor="baia-busca">Buscar código</Label>
-        <div className="search-wrap">
-          <Search aria-hidden="true" />
-          <Input
-            id="baia-busca"
-            value={filtros.busca ?? ""}
-            placeholder="Ex.: C-01"
-            className="mono pl-10"
-            onChange={(event) => onFiltro({ ...filtros, busca: event.target.value || undefined })}
-          />
+    <div className="filter-panel">
+      <div className="filter-search-row">
+        <div className="field baias-search">
+          <Label htmlFor="baia-busca">Buscar código</Label>
+          <div className="search-wrap">
+            <Search aria-hidden="true" />
+            <Input
+              id="baia-busca"
+              value={filtros.busca ?? ""}
+              placeholder="Ex.: C-01"
+              className="mono pl-10"
+              onChange={(event) => onFiltro({ ...filtros, busca: event.target.value || undefined })}
+            />
+          </div>
         </div>
-      </div>
-      <div className="field">
-        <Label htmlFor="baia-setor">Setor</Label>
-        <select
-          id="baia-setor"
-          className="select-control"
-          value={filtros.setor ?? ""}
-          onChange={(event) => onFiltro({ ...filtros, setor: (event.target.value || undefined) as SetorBaia | undefined })}
-        >
-          <option value="">Todos</option>
-          {setores.map((setor) => (
-            <option key={setor} value={setor}>
-              {setorLabel[setor]}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="field">
-        <Label htmlFor="baia-estado">Estado</Label>
-        <select
-          id="baia-estado"
-          className="select-control"
-          value={filtros.estado ?? ""}
-          onChange={(event) => onFiltro({ ...filtros, estado: (event.target.value || undefined) as EstadoBaia | undefined })}
-        >
-          <option value="">Todos</option>
-          {estados.map((estado) => (
-            <option key={estado} value={estado}>
-              {estadoLabel[estado]}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="field">
-        <span className="legend">Visualização</span>
-        <div className="view-switch" role="group" aria-label="Visualização">
-          <Button type="button" variant={view === "lista" ? "default" : "outline"} onClick={() => onView("lista")}>
-            Lista
+        <div className="filter-search-actions">
+          <Button type="button" variant={filtrosAbertos ? "default" : "outline"} onClick={() => setFiltrosAbertos((open) => !open)}>
+            <SlidersHorizontal aria-hidden="true" />
+            Filtros
           </Button>
-          <Button type="button" variant={view === "mapa" ? "default" : "outline"} onClick={() => onView("mapa")}>
-            Mapa
+          <div className="view-switch" role="group" aria-label="Visualização">
+            <Button type="button" variant={view === "lista" ? "default" : "outline"} onClick={() => onView("lista")}>
+              Lista
+            </Button>
+            <Button type="button" variant={view === "mapa" ? "default" : "outline"} onClick={() => onView("mapa")}>
+              Mapa
+            </Button>
+          </div>
+          <Button type="button" variant="outline" disabled={!temFiltro} onClick={() => onFiltro({})}>
+            <X aria-hidden="true" />
+            Limpar
           </Button>
         </div>
       </div>
-      <div className="field baias-clear">
-        <span className="legend" aria-hidden="true">
-          Filtros
-        </span>
-        <Button type="button" variant="outline" disabled={!temFiltro} onClick={() => onFiltro({})}>
-          Limpar
-        </Button>
-      </div>
+      {filtrosAbertos ? (
+        <div className="filter-grid">
+          <div className="field">
+            <Label htmlFor="baia-setor">Setor</Label>
+            <ControlSelect
+              id="baia-setor"
+              value={filtros.setor ?? FILTER_ALL}
+              onValueChange={(value) => onFiltro({ ...filtros, setor: value === FILTER_ALL ? undefined : (value as SetorBaia) })}
+              options={[{ value: FILTER_ALL, label: "Todos" }, ...setores.map((setor) => ({ value: setor, label: setorLabel[setor] }))]}
+            />
+          </div>
+          <div className="field">
+            <Label htmlFor="baia-estado">Estado</Label>
+            <ControlSelect
+              id="baia-estado"
+              value={filtros.estado ?? FILTER_ALL}
+              onValueChange={(value) => onFiltro({ ...filtros, estado: value === FILTER_ALL ? undefined : (value as EstadoBaia) })}
+              options={[{ value: FILTER_ALL, label: "Todos" }, ...estados.map((estado) => ({ value: estado, label: estadoLabel[estado] }))]}
+            />
+          </div>
+        </div>
+      ) : null}
+      {temFiltro ? (
+        <ul className="filter-chips">
+          {filtros.busca?.trim() ? <li>Busca: {filtros.busca.trim()}</li> : null}
+          {filtros.setor ? <li>{setorLabel[filtros.setor]}</li> : null}
+          {filtros.estado ? <li>{estadoLabel[filtros.estado]}</li> : null}
+        </ul>
+      ) : null}
     </div>
   );
 }
@@ -717,36 +719,24 @@ function BaiaForm({
           <div className="row-2">
             <div className="field">
               <Label htmlFor="setor-baia">Setor</Label>
-              <select
+              <ControlSelect
                 id="setor-baia"
-                className="select-control"
                 value={form.setor}
-                onChange={(event) => setForm({ ...form, setor: event.target.value as SetorBaia })}
-              >
-                {setores.map((setor) => (
-                  <option key={setor} value={setor}>
-                    {setorLabel[setor]}
-                  </option>
-                ))}
-              </select>
+                onValueChange={(value) => setForm({ ...form, setor: value as SetorBaia })}
+                options={setores.map((setor) => ({ value: setor, label: setorLabel[setor] }))}
+              />
             </div>
             <div className="field">
               <Label htmlFor="tipo-baia">Tipo</Label>
-              <select
+              <ControlSelect
                 id="tipo-baia"
-                className="select-control"
                 value={form.tipo}
-                onChange={(event) => {
-                  const tipo = event.target.value as TipoBaia;
+                onValueChange={(value) => {
+                  const tipo = value as TipoBaia;
                   setForm({ ...form, tipo, capacidade: tipo === "individual" ? "1" : form.capacidade });
                 }}
-              >
-                {tipos.map((tipo) => (
-                  <option key={tipo} value={tipo}>
-                    {tipoLabel[tipo]}
-                  </option>
-                ))}
-              </select>
+                options={tipos.map((tipo) => ({ value: tipo, label: tipoLabel[tipo] }))}
+              />
             </div>
           </div>
           <div className="row-2">
