@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Logger,
   Param,
   ParseIntPipe,
   Patch,
@@ -34,7 +35,7 @@ import { UpdateAnimalDto } from "./dto/update-animal.dto";
 @Controller("animais")
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class AnimaisController {
-  constructor(private readonly animais: AnimaisService) {}
+  constructor(private readonly animais: AnimaisService) { }
 
   @Get("racas")
   listarRacas(@Query("especie") especie?: "cao" | "gato") {

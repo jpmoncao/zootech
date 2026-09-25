@@ -1,3 +1,5 @@
+import { LucideIcon } from "lucide-react";
+
 export type PerfilAcesso = "coordenacao" | "veterinario" | "agente" | "recepcao";
 
 export type PublicUser = {

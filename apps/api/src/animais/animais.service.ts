@@ -106,11 +106,11 @@ export class AnimaisService {
     const where: Prisma.AnimalWhereInput = {
       ...(filtros.busca?.trim()
         ? {
-            OR: [
-              { nome: { contains: normalizeText(filtros.busca), mode: "insensitive" } },
-              { numeroRegistroNormalizado: { contains: normalizeRegistro(filtros.busca) } },
-            ],
-          }
+          OR: [
+            { nome: { contains: normalizeText(filtros.busca), mode: "insensitive" } },
+            { numeroRegistroNormalizado: { contains: normalizeRegistro(filtros.busca) } },
+          ],
+        }
         : {}),
       ...(filtros.especie ? { especie: filtros.especie } : {}),
       ...(filtros.sexo ? { sexo: filtros.sexo } : {}),
@@ -287,7 +287,11 @@ export class AnimaisService {
       }
 
       const atualizado = await tx.animal.update({ where: { id }, data: { baiaId: destinoId }, include: DETAIL_INCLUDE });
-      const resumo = this.resumoAlocacao(origemId, destinoId);
+
+      const baiaOrigem = atual.baia ? atual.baia.codigo : null;
+      const baiaDestino = atualizado.baia ? atualizado.baia.codigo : null;  
+
+      const resumo = this.resumoAlocacao(baiaOrigem, baiaDestino);
       const dados = {
         baiaOrigemId: origemId,
         baiaDestinoId: destinoId,
@@ -398,6 +402,7 @@ export class AnimaisService {
       include: { usuario: { select: { id: true, nome: true } } },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     });
+    console.log(eventos);
     return eventos.map((evento) => this.viewEvento(evento));
   }
 
@@ -601,10 +606,10 @@ export class AnimaisService {
     }
   }
 
-  private resumoAlocacao(origemId: number | null, destinoId: number | null) {
-    if (origemId && destinoId) return `Animal transferido da baia ${origemId} para a baia ${destinoId}.`;
-    if (destinoId) return `Animal alocado na baia ${destinoId}.`;
-    return `Animal retirado da baia ${origemId}.`;
+  private resumoAlocacao(origemCodigo: string | null, destinoCodigo: string | null) {
+    if (origemCodigo && destinoCodigo) return `Animal transferido da baia ${origemCodigo} para a baia ${destinoCodigo}.`;
+    if (destinoCodigo) return `Animal alocado na baia ${destinoCodigo}.`;
+    return `Animal retirado da baia ${origemCodigo}.`;
   }
 
   private requiredText(value: string, message: string) {

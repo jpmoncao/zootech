@@ -98,7 +98,7 @@
 
 ## 2026-09-24 — Interface do web usa shadcn
 
-**Status:** Accepted
+**Status:** Superseded
 
 **Context:** O front já tem identidade visual e controles desenhados à mão no login e na casca.
 
@@ -106,7 +106,19 @@
 
 **Rationale:** Confirmado pelo autor.
 
-**Consequences:** Peça nova de interface entra por `src/components/ui`. O tema padrão do shadcn não substitui petróleo, Figtree nem os raios já registrados. Login e casca usam esses componentes desde 2026-09-24.
+**Consequences:** Substituída em 2026-09-25: o contrato passou a incluir Tailwind no `className` e a valer também em `AGENTS.md`.
+
+## 2026-09-25 — Interface do web usa shadcn e Tailwind
+
+**Status:** Accepted
+
+**Context:** Telas de baias e animais ganharam classes de feature em `globals.css`. O autor pediu Tailwind no projeto todo, shadcn nos controles, e que a regra valesse fora do Cursor (Codex lê `AGENTS.md`).
+
+**Decision:** Controles prontos vêm do shadcn em `apps/web/src/components/ui`. Layout, grid e estado visual usam Tailwind no `className`. Não criar classes de feature em `globals.css`. O tema continua `DESIGN.md`. A mesma regra está em `AGENTS.md` e em `.cursor/rules/shadcn-components.mdc`. A API não usa essa biblioteca.
+
+**Rationale:** Confirmado pelo autor.
+
+**Consequences:** `globals.css` fica com tokens, base e tema. Peça nova entra pelo CLI do shadcn em `apps/web`. Codex e outros agentes que seguem `AGENTS.md` recebem o mesmo contrato.
 
 ## 2026-09-23 — Reset onto the agentic workflow
 

@@ -27,6 +27,9 @@ Autenticação JWT concluída (tarefas 1–10). Gestão de baias concluída no e
 ## Recent Changes
 
 - 2026-09-25
+  - Change: `globals.css` ficou só com tokens, reset, tipografia base e tema. Layout das telas passou para utilitários Tailwind no `className`.
+  - Reason: Evitar CSS de feature no arquivo global.
+- 2026-09-25
   - Change: Fotos de animais passam a ser buscadas com o JWT da sessão e exibidas por blob URL. A tag `img` não enviava `Authorization` e a rota autenticada respondia 401.
   - Reason: A galeria e a miniatura da lista apareciam quebradas mesmo com o arquivo salvo.
 - 2026-09-24
@@ -116,6 +119,6 @@ Autenticação JWT concluída (tarefas 1–10). Gestão de baias concluída no e
 
 - Não restaurar o bootstrap apagado.
 - O veterinário ADM enxerga todas as funcionalidades. Funcionário e veterinário continuam com os casos de uso do diagrama.
-- Interface em `apps/web` usa shadcn, no tema de `DESIGN.md`. Login, casca, Acessos e perfil usam esses componentes.
+- Interface em `apps/web` usa shadcn nos controles e Tailwind no `className`, no tema de `DESIGN.md`. Sem classes de feature em `globals.css`. O contrato está em `AGENTS.md`.
 - Persistência é Postgres. Não há fila externa, storage nem serviço de terceiros neste momento.
 - Conta seed local: ver `apps/api/.env.example` (`SEED_COORDENACAO_*`). Sem `.env`, o seed não cria a conta.

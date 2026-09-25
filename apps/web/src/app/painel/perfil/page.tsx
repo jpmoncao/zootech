@@ -47,7 +47,7 @@ function Perfil() {
     <>
       <div>
         <h1>Perfil</h1>
-        <p className="lede">Telefone, e-mail e senha. A função é definida pela coordenação.</p>
+        <p className="[color:var(--muted)] [max-width:62ch]">Telefone, e-mail e senha. A função é definida pela coordenação.</p>
       </div>
       {erro ? (
         <Alert variant="destructive">
@@ -56,8 +56,8 @@ function Perfil() {
       ) : null}
       {usuario ? (
         <>
-          <section className="panel" aria-label="Dados da conta">
-            <dl className="meta">
+          <section className="[background:var(--surface)] [border:1px_solid_var(--line)] [border-radius:10px] [padding:20px] [display:flex] [flex-direction:column] [gap:16px] [box-shadow:var(--shadow)]" aria-label="Dados da conta">
+            <dl className="[display:grid] [grid-template-columns:repeat(2,_minmax(0,_1fr))] [gap:12px_16px] [margin:0] [&_div]:[display:flex] [&_div]:[flex-direction:column] [&_div]:[gap:2px] [&_dt]:[font-size:12px] [&_dt]:[font-weight:600] [&_dt]:[color:var(--muted)] [&_dd]:[margin:0] [&_dd]:[font-size:15px] max-[760px]:[grid-template-columns:1fr]">
               <div>
                 <dt>Nome</dt>
                 <dd>{usuario.nome}</dd>
@@ -93,7 +93,7 @@ function Perfil() {
           <SenhaForm />
         </>
       ) : erro ? null : (
-        <div className="stack" aria-hidden="true">
+        <div className="[display:flex] [flex-direction:column] [gap:12px]" aria-hidden="true">
           <Skeleton className="h-28 w-full" />
           <Skeleton className="h-40 w-full" />
           <Skeleton className="h-40 w-full" />
@@ -138,12 +138,12 @@ function TelefoneForm({
   }
 
   return (
-    <form className="panel" onSubmit={submit}>
-      <div className="field">
+    <form className="[background:var(--surface)] [border:1px_solid_var(--line)] [border-radius:10px] [padding:20px] [display:flex] [flex-direction:column] [gap:16px] [box-shadow:var(--shadow)]" onSubmit={submit}>
+      <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
         <Label htmlFor="telefone">Telefone</Label>
         <Input
           id="telefone"
-          className="mono"
+          className="[font-family:var(--mono)] [font-variant-numeric:tabular-nums] [font-size:14px]"
           inputMode="numeric"
           autoComplete="tel"
           value={telefone}
@@ -154,15 +154,15 @@ function TelefoneForm({
             setOk(false);
           }}
         />
-        <p className="hint">Vazio ou 10 a 11 dígitos.</p>
+        <p className="[font-size:13px] [color:var(--muted)] [overflow-wrap:anywhere]">Vazio ou 10 a 11 dígitos.</p>
       </div>
-      {erro ? <p className="error-text">{erro}</p> : null}
+      {erro ? <p className="[font-size:13px] [color:var(--crit)]">{erro}</p> : null}
       {ok ? (
         <Alert variant="success" role="status">
           <AlertDescription className="text-inherit">Telefone atualizado.</AlertDescription>
         </Alert>
       ) : null}
-      <div className="actions">
+      <div className="[display:flex] [justify-content:space-between] [gap:12px] max-[760px]:[grid-template-columns:1fr] max-[760px]:[flex-direction:column] max-[760px]:[align-items:stretch]">
         <Button type="submit" disabled={pending}>
           Salvar telefone
         </Button>
@@ -206,8 +206,8 @@ function EmailForm({
   }
 
   return (
-    <form className="panel" onSubmit={submit}>
-      <div className="field">
+    <form className="[background:var(--surface)] [border:1px_solid_var(--line)] [border-radius:10px] [padding:20px] [display:flex] [flex-direction:column] [gap:16px] [box-shadow:var(--shadow)]" onSubmit={submit}>
+      <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
         <Label htmlFor="email">E-mail institucional</Label>
         <Input
           id="email"
@@ -222,13 +222,13 @@ function EmailForm({
           }}
         />
       </div>
-      {erro ? <p className="error-text">{erro}</p> : null}
+      {erro ? <p className="[font-size:13px] [color:var(--crit)]">{erro}</p> : null}
       {ok ? (
         <Alert variant="success" role="status">
           <AlertDescription className="text-inherit">E-mail atualizado.</AlertDescription>
         </Alert>
       ) : null}
-      <div className="actions">
+      <div className="[display:flex] [justify-content:space-between] [gap:12px] max-[760px]:[grid-template-columns:1fr] max-[760px]:[flex-direction:column] max-[760px]:[align-items:stretch]">
         <Button type="submit" disabled={pending}>
           Salvar e-mail
         </Button>
@@ -272,8 +272,8 @@ function SenhaForm() {
   }
 
   return (
-    <form className="panel" onSubmit={submit}>
-      <div className="field">
+    <form className="[background:var(--surface)] [border:1px_solid_var(--line)] [border-radius:10px] [padding:20px] [display:flex] [flex-direction:column] [gap:16px] [box-shadow:var(--shadow)]" onSubmit={submit}>
+      <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
         <Label htmlFor="senha-atual">Senha atual</Label>
         <Input
           id="senha-atual"
@@ -283,8 +283,8 @@ function SenhaForm() {
           onChange={(event) => setAtual(event.target.value)}
         />
       </div>
-      <div className="row-2">
-        <div className="field">
+      <div className="[display:grid] [grid-template-columns:1fr_1fr] [gap:12px] max-[760px]:[grid-template-columns:1fr]">
+        <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
           <Label htmlFor="senha-nova">Nova senha</Label>
           <Input
             id="senha-nova"
@@ -294,7 +294,7 @@ function SenhaForm() {
             onChange={(event) => setNova(event.target.value)}
           />
         </div>
-        <div className="field">
+        <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
           <Label htmlFor="senha-confirma">Confirmar nova senha</Label>
           <Input
             id="senha-confirma"
@@ -305,13 +305,13 @@ function SenhaForm() {
           />
         </div>
       </div>
-      {erro ? <p className="error-text">{erro}</p> : null}
+      {erro ? <p className="[font-size:13px] [color:var(--crit)]">{erro}</p> : null}
       {ok ? (
         <Alert variant="success" role="status">
           <AlertDescription className="text-inherit">Senha atualizada.</AlertDescription>
         </Alert>
       ) : null}
-      <div className="actions">
+      <div className="[display:flex] [justify-content:space-between] [gap:12px] max-[760px]:[grid-template-columns:1fr] max-[760px]:[flex-direction:column] max-[760px]:[align-items:stretch]">
         <Button type="submit" disabled={pending}>
           Salvar senha
         </Button>

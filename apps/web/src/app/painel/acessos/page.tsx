@@ -67,17 +67,17 @@ function Acessos() {
     <>
       <div>
         <h1>Acessos</h1>
-        <p className="lede">Pedidos aguardando aceite e funções das contas ativas.</p>
+        <p className="[color:var(--muted)] [max-width:62ch]">Pedidos aguardando aceite e funções das contas ativas.</p>
       </div>
       {erro ? (
         <Alert variant="destructive">
           <AlertDescription className="text-inherit">{erro}</AlertDescription>
         </Alert>
       ) : null}
-      <section className="stack" aria-label="Pedidos pendentes">
+      <section className="[display:flex] [flex-direction:column] [gap:12px]" aria-label="Pedidos pendentes">
         <h2>Pedidos pendentes</h2>
         {fila === null ? <Skeleton className="h-24 w-full" /> : null}
-        {fila?.length === 0 ? <p className="hint">Nenhum pedido aguardando aceite.</p> : null}
+        {fila?.length === 0 ? <p className="[font-size:13px] [color:var(--muted)] [overflow-wrap:anywhere]">Nenhum pedido aguardando aceite.</p> : null}
         {fila?.map((pedido) => (
           <PedidoCard
             key={pedido.id}
@@ -92,7 +92,7 @@ function Acessos() {
           />
         ))}
       </section>
-      <section className="stack" aria-label="Usuários ativos">
+      <section className="[display:flex] [flex-direction:column] [gap:12px]" aria-label="Usuários ativos">
         <h2>Usuários ativos</h2>
         {usuarios === null ? <Skeleton className="h-24 w-full" /> : null}
         {usuarios?.map((usuario) => (
@@ -167,12 +167,12 @@ function PedidoCard({
   }
 
   return (
-    <form className="panel" onSubmit={aceitar}>
+    <form className="[background:var(--surface)] [border:1px_solid_var(--line)] [border-radius:10px] [padding:20px] [display:flex] [flex-direction:column] [gap:16px] [box-shadow:var(--shadow)]" onSubmit={aceitar}>
       <div>
         <h3>{pedido.nome}</h3>
-        <p className="hint">Pedido em {formatarData(pedido.createdAt)}</p>
+        <p className="[font-size:13px] [color:var(--muted)] [overflow-wrap:anywhere]">Pedido em {formatarData(pedido.createdAt)}</p>
       </div>
-      <dl className="meta">
+      <dl className="[display:grid] [grid-template-columns:repeat(2,_minmax(0,_1fr))] [gap:12px_16px] [margin:0] [&_div]:[display:flex] [&_div]:[flex-direction:column] [&_div]:[gap:2px] [&_dt]:[font-size:12px] [&_dt]:[font-weight:600] [&_dt]:[color:var(--muted)] [&_dd]:[margin:0] [&_dd]:[font-size:15px] max-[760px]:[grid-template-columns:1fr]">
         <div>
           <dt>CPF</dt>
           <dd>{pedido.cpfMascarado}</dd>
@@ -196,16 +196,16 @@ function PedidoCard({
           </div>
         ) : null}
       </dl>
-      <fieldset className="field" style={{ border: 0, padding: 0, margin: 0 }}>
-        <legend className="legend">Função que vale no aceite</legend>
+      <fieldset className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]" style={{ border: 0, padding: 0, margin: 0 }}>
+        <legend className="[font-size:13px] [font-weight:600]">Função que vale no aceite</legend>
         <PapelRadio name={`aceite-${pedido.id}`} value={funcao} onChange={setFuncao} />
       </fieldset>
       {precisaCrmv ? (
-        <div className="field">
+        <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
           <Label htmlFor={`crmv-${pedido.id}`}>CRMV</Label>
           <Input
             id={`crmv-${pedido.id}`}
-            className="mono"
+            className="[font-family:var(--mono)] [font-variant-numeric:tabular-nums] [font-size:14px]"
             inputMode="numeric"
             value={crmv}
             aria-invalid={erro?.includes("CRMV") ? true : undefined}
@@ -213,13 +213,13 @@ function PedidoCard({
           />
         </div>
       ) : null}
-      {erro ? <p className="error-text">{erro}</p> : null}
-      <div className="actions">
+      {erro ? <p className="[font-size:13px] [color:var(--crit)]">{erro}</p> : null}
+      <div className="[display:flex] [justify-content:space-between] [gap:12px] max-[760px]:[grid-template-columns:1fr] max-[760px]:[flex-direction:column] max-[760px]:[align-items:stretch]">
         <Button type="submit" disabled={pending !== null}>
           Aceitar
         </Button>
       </div>
-      <div className="field">
+      <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
         <Label htmlFor={`motivo-${pedido.id}`}>Motivo da recusa (opcional)</Label>
         <Input
           id={`motivo-${pedido.id}`}
@@ -228,7 +228,7 @@ function PedidoCard({
           onChange={(event) => setMotivo(event.target.value)}
         />
       </div>
-      <div className="actions">
+      <div className="[display:flex] [justify-content:space-between] [gap:12px] max-[760px]:[grid-template-columns:1fr] max-[760px]:[flex-direction:column] max-[760px]:[align-items:stretch]">
         <Button type="button" variant="outline" disabled={pending !== null} onClick={recusar}>
           Recusar
         </Button>
@@ -282,11 +282,11 @@ function UsuarioCard({
   }
 
   return (
-    <form className="panel" onSubmit={trocar}>
+    <form className="[background:var(--surface)] [border:1px_solid_var(--line)] [border-radius:10px] [padding:20px] [display:flex] [flex-direction:column] [gap:16px] [box-shadow:var(--shadow)]" onSubmit={trocar}>
       <div>
         <h3>{usuario.nome}</h3>
       </div>
-      <dl className="meta">
+      <dl className="[display:grid] [grid-template-columns:repeat(2,_minmax(0,_1fr))] [gap:12px_16px] [margin:0] [&_div]:[display:flex] [&_div]:[flex-direction:column] [&_div]:[gap:2px] [&_dt]:[font-size:12px] [&_dt]:[font-weight:600] [&_dt]:[color:var(--muted)] [&_dd]:[margin:0] [&_dd]:[font-size:15px] max-[760px]:[grid-template-columns:1fr]">
         <div>
           <dt>Matrícula</dt>
           <dd>{usuario.matricula ?? "—"}</dd>
@@ -303,36 +303,36 @@ function UsuarioCard({
         ) : null}
       </dl>
       {proprio ? (
-        <p className="hint">
+        <p className="[font-size:13px] [color:var(--muted)] [overflow-wrap:anywhere]">
           {unicaCoordenacao
             ? "É preciso existir outra coordenação antes de rebaixar esta conta."
             : "A coordenação não troca o próprio tipo."}
         </p>
       ) : (
         <>
-          <fieldset className="field" style={{ border: 0, padding: 0, margin: 0 }}>
-            <legend className="legend">Nova função</legend>
+          <fieldset className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]" style={{ border: 0, padding: 0, margin: 0 }}>
+            <legend className="[font-size:13px] [font-weight:600]">Nova função</legend>
             <PapelRadio name={`troca-${usuario.id}`} value={funcao} onChange={setFuncao} />
           </fieldset>
           {funcao === "veterinario" ? (
-            <div className="field">
+            <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
               <Label htmlFor={`crmv-user-${usuario.id}`}>CRMV</Label>
               <Input
                 id={`crmv-user-${usuario.id}`}
-                className="mono"
+                className="[font-family:var(--mono)] [font-variant-numeric:tabular-nums] [font-size:14px]"
                 inputMode="numeric"
                 value={crmv}
                 onChange={(event) => setCrmv(event.target.value)}
               />
             </div>
           ) : null}
-          {erro ? <p className="error-text">{erro}</p> : null}
+          {erro ? <p className="[font-size:13px] [color:var(--crit)]">{erro}</p> : null}
           {ok ? (
             <Alert variant="success" role="status">
               <AlertDescription className="text-inherit">{ok}</AlertDescription>
             </Alert>
           ) : null}
-          <div className="actions">
+          <div className="[display:flex] [justify-content:space-between] [gap:12px] max-[760px]:[grid-template-columns:1fr] max-[760px]:[flex-direction:column] max-[760px]:[align-items:stretch]">
             <Button type="submit" disabled={pending}>
               Confirmar troca
             </Button>
@@ -353,10 +353,10 @@ function PapelRadio({
   onChange: (value: PerfilAcesso) => void;
 }) {
   return (
-    <RadioGroup className="choice-grid" value={value} aria-label={name} onValueChange={(next) => onChange(next as PerfilAcesso)}>
+    <RadioGroup className="[display:grid] [grid-template-columns:1fr_1fr] [gap:8px] max-[760px]:[grid-template-columns:1fr]" value={value} aria-label={name} onValueChange={(next) => onChange(next as PerfilAcesso)}>
       {papeis.map((papel) => (
-        <Label key={papel} htmlFor={`${name}-${papel}`} className="choice" data-checked={value === papel ? "true" : undefined}>
-          <RadioGroupItem id={`${name}-${papel}`} value={papel} className="sr-only" />
+        <Label key={papel} htmlFor={`${name}-${papel}`} className="[min-height:64px] [text-align:left] [border:1px_solid_var(--line)] [background:var(--surface)] [border-radius:8px] [padding:10px_12px] [cursor:pointer] [color:var(--ink)] [font:600_14px/1.3_var(--body)] [&_small]:[display:block] [&_small]:[font-weight:500] [&_small]:[color:var(--muted)] aria-checked:[border-color:var(--primary)] aria-checked:[background:var(--primary-50)] aria-checked:[box-shadow:var(--focus)] data-[checked=true]:[border-color:var(--primary)] data-[checked=true]:[background:var(--primary-50)] data-[checked=true]:[box-shadow:var(--focus)]" data-checked={value === papel ? "true" : undefined}>
+          <RadioGroupItem id={`${name}-${papel}`} value={papel} className="[position:absolute] [width:1px] [height:1px] [padding:0] [margin:-1px] [overflow:hidden] [clip:rect(0,_0,_0,_0)] [white-space:nowrap] [border:0]" />
           {perfilLabel[papel]}
         </Label>
       ))}

@@ -80,11 +80,11 @@ export function PhotoPicker({
 
   return (
     <>
-      <div className="photo-upload">
+      <div className="[border:1px_dashed_#a9cbc7] [border-radius:8px] [background:var(--primary-50)] [padding:14px] [display:grid] [grid-template-columns:34px_minmax(0,_1fr)_auto] [gap:12px] [align-items:center] [&>svg]:[color:var(--primary)] [&>svg]:[width:26px] [&>svg]:[height:26px]">
         <ImagePlus aria-hidden="true" />
         <div>
-          <p className="photo-upload-title">{label}</p>
-          <p className="hint">{hint}</p>
+          <p className="[margin:0] [font-weight:700]">{label}</p>
+          <p className="[font-size:13px] [color:var(--muted)] [overflow-wrap:anywhere]">{hint}</p>
         </div>
         <Button type="button" variant="outline" disabled={disabled || remaining <= 0} onClick={openPicker}>
           Adicionar fotos
@@ -101,14 +101,14 @@ export function PhotoPicker({
       </div>
 
       <Dialog open={Boolean(current && preview)} onOpenChange={(open) => (!open ? closeQueue() : undefined)}>
-        <DialogContent className="photo-crop-dialog z-[70]" overlayClassName="z-[70]" showCloseButton={false}>
+        <DialogContent className="[max-width:min(520px,_calc(100vw_-_2rem))] z-[70]" overlayClassName="z-[70]" showCloseButton={false}>
           <DialogHeader>
             <DialogTitle>Recortar foto</DialogTitle>
             <DialogDescription>
               Ajuste o quadrado. {queue.length > 1 ? `${queue.length} fotos na fila.` : "Uma foto para recortar."}
             </DialogDescription>
           </DialogHeader>
-          <div className="photo-crop-stage">
+          <div className="[position:relative] [height:320px] [overflow:hidden] [border-radius:8px] [background:#17211f]">
             {preview ? (
               <Cropper
                 image={preview}
@@ -123,7 +123,7 @@ export function PhotoPicker({
               />
             ) : null}
           </div>
-          <label className="photo-crop-zoom">
+          <label className="[display:flex] [flex-direction:column] [gap:6px] [font-size:13px] [font-weight:600]">
             Zoom
             <input type="range" min={1} max={3} step={0.05} value={zoom} onChange={(event) => setZoom(Number(event.target.value))} />
           </label>

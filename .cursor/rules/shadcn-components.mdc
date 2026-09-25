@@ -1,23 +1,24 @@
 ---
-description: A interface do apps/web usa componentes shadcn, no tema do ZooTech
+description: A interface do apps/web usa componentes shadcn e Tailwind, no tema do ZooTech
 globs: apps/web/**/*.{tsx,css}
 alwaysApply: false
 ---
 
-# Componentes shadcn
+# Componentes shadcn e Tailwind
 
-A interface em `apps/web` usa shadcn/ui. Controles prontos vivem em `apps/web/src/components/ui`. Telas e cascas ficam fora dessa pasta.
+A interface em `apps/web` usa shadcn/ui e utilitários Tailwind. Controles prontos vivem em `apps/web/src/components/ui`. Telas e cascas ficam fora dessa pasta.
 
 - Botão, campo, seleção, diálogo, menu, aba, alerta e equivalentes vêm do shadcn. Não recrie esses controles com elemento nativo e classe própria.
+- Layout de tela, grids e estados visuais usam Tailwind no `className`. Não crie classes de feature em `globals.css`.
 - O tema segue `DESIGN.md`: petróleo `#135E63`, névoa `#F4F7F6`, Figtree na interface, raios 6 (campo), 8 (botão) e 10 (painel). Âmbar `#E8A317` só no escudo provisório. Não publique o tema padrão do shadcn.
 - Instale peça nova com o CLI do shadcn dentro de `apps/web`, e ajuste o componente gerado aos tokens acima.
 - Ícone é SVG do próprio componente ou de uma biblioteca já adotada no app. Não use emoji no lugar de ícone.
 
 ```tsx
-// ruim — controle desenhado à mão
+// ruim — controle desenhado à mão e CSS de página
 <button className="btn btn-primary" type="submit">Entrar</button>
 
-// certo — componente shadcn, tema ZooTech
+// certo — componente shadcn, tema ZooTech, layout em Tailwind
 import { Button } from "@/components/ui/button";
 
 <Button type="submit">Entrar</Button>

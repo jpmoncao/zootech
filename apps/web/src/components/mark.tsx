@@ -6,7 +6,7 @@ export function Mark({ size = 30 }: MarkProps) {
   const height = Math.round(size * (34 / 30));
   return (
     <svg
-      className="mark"
+      className="[view-transition-name:zoot-mark] [flex:none]"
       width={size}
       height={height}
       viewBox="0 0 30 34"

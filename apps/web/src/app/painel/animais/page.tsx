@@ -27,6 +27,7 @@ import { PhotoPicker } from "@/components/photo-picker";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -264,15 +265,15 @@ function Animais() {
   }
 
   return (
-    <div className="animais-page">
-      <div className="animais-head">
+    <div className="[display:flex] [flex-direction:column] [gap:20px] [width:100%]">
+      <div className="[display:flex] [align-items:flex-start] [justify-content:space-between] [gap:16px] max-[760px]:[flex-direction:column]">
         <div>
           <h1>Animais</h1>
-          <p className="lede">
+          <p className="[color:var(--muted)] [max-width:62ch]">
             Consulta do plantel acolhido, localização em baias e pendências principais.
           </p>
         </div>
-        <div className="baias-head-actions">
+        <div className="[display:flex] [align-items:center] [gap:10px] [flex-wrap:wrap] [justify-content:flex-end] max-[760px]:[width:100%] max-[760px]:[justify-content:stretch] max-[760px]:[&>*]:[flex:1]">
           <Button variant="outline" type="button" onClick={() => void carregar(filtros)}>
             <RefreshCw aria-hidden="true" />
             Atualizar
@@ -292,26 +293,26 @@ function Animais() {
         </Alert>
       ) : null}
 
-      <section className="baias-metrics" aria-label="Indicadores de animais">
+      <section className="[display:grid] [grid-template-columns:repeat(5,_minmax(0,_1fr))] [gap:10px] max-[760px]:[grid-template-columns:repeat(2,_minmax(0,_1fr))]" aria-label="Indicadores de animais">
         <Metric label="Animais" value={indicadores.total} />
         <Metric label="Nesta página" value={resultado?.items.length ?? 0} tone="info" />
         <Metric label="Sem baia" value={indicadores.semBaia} tone="warn" />
         <Metric label="Com alertas" value={indicadores.comAlertas} tone="crit" />
       </section>
 
-      <section className="panel animais-workbench" aria-label="Consulta de animais">
-        <div className="section-title">
+      <section className="[background:var(--surface)] [border:1px_solid_var(--line)] [border-radius:10px] [padding:20px] [display:flex] [flex-direction:column] [gap:16px] [box-shadow:var(--shadow)] [overflow:clip]" aria-label="Consulta de animais">
+        <div className="[display:flex] [align-items:flex-start] [justify-content:space-between] [gap:12px] [&_h2]:[margin:0] [&_h2]:[font-size:17px] [&>svg]:[width:22px] [&>svg]:[height:22px] [&>svg]:[color:var(--primary)] [&_svg]:[color:var(--primary)]">
           <div>
             <h2>Plantel operacional</h2>
           </div>
           <SlidersHorizontal aria-hidden="true" />
         </div>
 
-        <form className="filter-panel" onSubmit={buscar}>
-          <div className="filter-search-row">
-            <div className="field animais-search">
+        <form className="[display:flex] [flex-direction:column] [gap:14px]" onSubmit={buscar}>
+          <div className="[display:grid] [grid-template-columns:minmax(240px,_1fr)_auto] [align-items:end] [gap:12px] max-[760px]:[grid-template-columns:1fr]">
+            <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600] [grid-column:span_2]">
               <Label htmlFor="animal-busca">Buscar nome ou registro</Label>
-              <div className="search-wrap">
+              <div className="[position:relative] [&_svg]:[position:absolute] [&_svg]:[left:12px] [&_svg]:[top:50%] [&_svg]:[width:18px] [&_svg]:[height:18px] [&_svg]:[color:var(--muted)] [&_svg]:[transform:translateY(-50%)] [&_svg]:[pointer-events:none]">
                 <Search aria-hidden="true" />
                 <Input
                   id="animal-busca"
@@ -322,7 +323,7 @@ function Animais() {
                 />
               </div>
             </div>
-            <div className="filter-search-actions">
+            <div className="[display:flex] [flex-wrap:wrap] [align-items:center] [justify-content:flex-end] [gap:12px] max-[760px]:[grid-template-columns:1fr] max-[760px]:[&>*]:[width:100%]">
               <Button type="submit">
                 <Search aria-hidden="true" />
                 Buscar
@@ -339,8 +340,8 @@ function Animais() {
           </div>
 
           {filtrosAbertos ? (
-            <div className="filter-grid">
-              <div className="field">
+            <div className="[display:grid] [grid-template-columns:repeat(3,_minmax(0,_1fr))] [gap:12px] [padding:12px] [border:1px_solid_var(--line)] [border-radius:10px] [background:var(--bg)] min-[761px]:max-[1023px]:[grid-template-columns:repeat(2,_minmax(0,_1fr))] max-[760px]:[grid-template-columns:1fr]">
+              <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
                 <Label htmlFor="animal-especie">Espécie</Label>
                 <ControlSelect
                   id="animal-especie"
@@ -349,7 +350,7 @@ function Animais() {
                   options={[{ value: FILTER_ALL, label: "Todas" }, ...especies.map((especie) => ({ value: especie, label: especieLabel[especie] }))]}
                 />
               </div>
-              <div className="field">
+              <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
                 <Label htmlFor="animal-situacao">Situação</Label>
                 <ControlSelect
                   id="animal-situacao"
@@ -365,7 +366,7 @@ function Animais() {
                   options={[{ value: FILTER_ALL, label: "Operacionais" }, ...situacoes.map((situacao) => ({ value: situacao, label: situacaoLabel[situacao] }))]}
                 />
               </div>
-              <div className="field">
+              <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
                 <Label htmlFor="animal-sexo">Sexo</Label>
                 <ControlSelect
                   id="animal-sexo"
@@ -374,7 +375,7 @@ function Animais() {
                   options={[{ value: FILTER_ALL, label: "Todos" }, ...sexos.map((sexo) => ({ value: sexo, label: sexoLabel[sexo] }))]}
                 />
               </div>
-              <div className="field">
+              <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
                 <Label htmlFor="animal-porte">Porte</Label>
                 <ControlSelect
                   id="animal-porte"
@@ -383,7 +384,7 @@ function Animais() {
                   options={[{ value: FILTER_ALL, label: "Todos" }, ...portes.map((porte) => ({ value: porte, label: porteLabel[porte] }))]}
                 />
               </div>
-              <div className="field">
+              <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
                 <Label htmlFor="animal-castracao">Castração</Label>
                 <ControlSelect
                   id="animal-castracao"
@@ -392,7 +393,7 @@ function Animais() {
                   options={[{ value: FILTER_ALL, label: "Todas" }, ...castracoes.map((castracao) => ({ value: castracao, label: castradoLabel[castracao] }))]}
                 />
               </div>
-              <div className="field">
+              <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
                 <Label htmlFor="animal-baia">Baia</Label>
                 <ControlSelect
                   id="animal-baia"
@@ -405,7 +406,7 @@ function Animais() {
                   ]}
                 />
               </div>
-              <div className="animais-checks" aria-label="Filtros rápidos">
+              <div className="[display:grid] [grid-template-columns:repeat(3,_minmax(0,_1fr))] [gap:8px] [grid-column:1_/_-1] max-[760px]:[grid-template-columns:1fr]" aria-label="Filtros rápidos">
                 <CheckFilter
                   id="animal-sem-baia"
                   label="Sem baia"
@@ -429,7 +430,7 @@ function Animais() {
           ) : null}
 
           {temFiltro ? (
-            <ul className="filter-chips">
+            <ul className="[display:flex] [flex-wrap:wrap] [gap:8px] [margin:0] [padding:0] [list-style:none] [&_li]:[border:1px_solid_var(--line)] [&_li]:[border-radius:999px] [&_li]:[background:#fff] [&_li]:[color:var(--primary-700)] [&_li]:[padding:4px_10px] [&_li]:[font:700_12px/1.2_var(--body)]">
               {chipsFiltro(filtros, baias).map((chip) => (
                 <li key={chip}>{chip}</li>
               ))}
@@ -440,11 +441,11 @@ function Animais() {
         {loading ? <AnimaisSkeleton /> : null}
 
         {!loading && !erro && resultado?.items.length === 0 ? (
-          <div className="detail-empty">
+          <div className="[min-width:0] [min-height:100%] [flex:1] [min-height:220px] [display:grid] [place-items:center] [align-content:center] [gap:10px] [text-align:center] [&>svg]:[width:22px] [&>svg]:[height:22px] [&>svg]:[color:var(--primary)] min-[761px]:max-[1023px]:[min-height:0]">
             <AlertCircle aria-hidden="true" />
             <div>
               <h2>Nenhum animal encontrado</h2>
-              <p className="hint">
+              <p className="[font-size:13px] [color:var(--muted)] [overflow-wrap:anywhere]">
                 Ajuste os filtros ou inclua situações terminais para consultar adotados e óbitos.
               </p>
             </div>
@@ -452,7 +453,7 @@ function Animais() {
         ) : null}
 
         {!loading && resultado && resultado.items.length > 0 ? (
-          <div className="animal-list">
+          <div className="[display:flex] [flex-direction:column] [gap:8px]">
             {resultado.items.map((animal) => (
               <AnimalRow key={animal.id} animal={animal} podeEditar={podeAdministrar && !animal.somenteLeitura} onEdit={abrirEdicao} />
             ))}
@@ -460,15 +461,15 @@ function Animais() {
         ) : null}
 
         {!loading && resultado ? (
-          <div className="pagination-bar" aria-label="Paginação de animais">
-            <p className="hint">
+          <div className="[border-top:1px_solid_var(--line)] [padding-top:14px] [display:flex] [align-items:center] [justify-content:space-between] [gap:12px] max-[760px]:[align-items:stretch] max-[760px]:[flex-direction:column]" aria-label="Paginação de animais">
+            <p className="[font-size:13px] [color:var(--muted)] [overflow-wrap:anywhere]">
               {resultado.total === 0
                 ? "Nenhum resultado"
                 : temItensNaPagina
                   ? `${primeiroItem}-${ultimoItem} de ${resultado.total} resultado(s)`
                   : `Página sem itens de ${resultado.total} resultado(s)`}
             </p>
-            <div className="pagination-actions">
+            <div className="[display:flex] [align-items:center] [gap:8px] [flex-wrap:wrap] max-[760px]:[align-items:stretch] max-[760px]:[flex-direction:column] max-[760px]:[&>*]:[width:100%]">
               <Button
                 type="button"
                 variant="outline"
@@ -478,7 +479,7 @@ function Animais() {
                 <ChevronLeft aria-hidden="true" />
                 Anterior
               </Button>
-              <span className="pagination-current" aria-live="polite">
+              <span className="[color:var(--muted)] [font:700_13px/1_var(--body)] [white-space:nowrap]" aria-live="polite">
                 Página {paginaAtual} de {totalPaginas}
               </span>
               <Button
@@ -518,35 +519,35 @@ function AnimalRow({ animal, podeEditar, onEdit }: { animal: Animal; podeEditar:
       : `${animal.alertas.length} alerta${animal.alertas.length === 1 ? "" : "s"}`;
 
   return (
-    <div className="animal-row">
-      <Link className="animal-row-link" href={`/painel/animais/${animal.id}`} aria-label={`Abrir ficha de ${animal.nome}`}>
-        <span className="animal-photo" aria-hidden="true">
+    <div className="[width:100%] [min-height:84px] [border:1px_solid_var(--line)] [border-radius:8px] [background:#fff] [color:var(--ink)] [padding:12px] [display:grid] [grid-template-columns:minmax(0,_1fr)_auto_auto] [align-items:center] [gap:12px] hover:[border-color:var(--primary)] hover:[background:var(--primary-50)] focus-visible:[border-color:var(--primary)] focus-visible:[background:var(--primary-50)] has-[[data-detail=open]]:[border-color:var(--primary)] has-[[data-detail=open]]:[box-shadow:var(--focus)] max-[760px]:[grid-template-columns:1fr] max-[760px]:[align-items:start]">
+      <Link className="[min-width:0] [color:var(--ink)] [display:grid] [grid-template-columns:60px_minmax(0,_1fr)_auto_minmax(84px,_120px)] [align-items:center] [gap:12px] [text-decoration:none] max-[760px]:[grid-template-columns:52px_minmax(0,_1fr)] max-[760px]:[align-items:start]" href={`/painel/animais/${animal.id}`} aria-label={`Abrir ficha de ${animal.nome}`}>
+        <span className="[width:60px] [height:60px] [border-radius:8px] [background:var(--primary-50)] [color:var(--primary)] [display:grid] [place-items:center] [overflow:hidden] [&_img]:[width:100%] [&_img]:[height:100%] [&_img]:[object-fit:cover] [&_svg]:[width:26px] [&_svg]:[height:26px] max-[760px]:[width:52px] max-[760px]:[height:52px]" aria-hidden="true">
           {foto ? <AnimalPhoto foto={foto} alt="" /> : <Icon />}
         </span>
-        <span className="animal-main">
+        <span className="[min-width:0] [display:flex] [flex-direction:column] [gap:2px] [&_strong]:[font-size:17px] [&_span]:[color:var(--muted)] [&_span]:[font-size:13px] [&_small]:[color:var(--muted)] [&_small]:[font-size:13px] [&>*]:[overflow-wrap:anywhere]">
           <strong>{animal.nome}</strong>
-          <small className="mono">{animal.numeroRegistro}</small>
+          <small className="[font-family:var(--mono)] [font-variant-numeric:tabular-nums] [font-size:14px]">{animal.numeroRegistro}</small>
           <span>
             {animal.raca?.nome ?? "Raça não informada"} · {especieLabel[animal.especie]} · {sexoLabel[animal.sexo]}
           </span>
         </span>
-        <span className="status-badge" data-estado={animal.situacao}>
+        <span className="[min-height:28px] [border-radius:999px] [padding:6px_10px] [display:inline-flex] [align-items:center] [justify-content:center] [width:fit-content] [font:700_12px/1_var(--body)] [white-space:nowrap] data-[estado=ativa]:[background:var(--ok-50)] data-[estado=ativa]:[color:var(--ok)] data-[estado=em\_higienizacao]:[background:var(--info-50)] data-[estado=em\_higienizacao]:[color:var(--info)] data-[estado=interditada]:[background:var(--crit-50)] data-[estado=interditada]:[color:var(--crit)] data-[estado=inativa]:[background:var(--bg)] data-[estado=inativa]:[color:var(--muted)] data-[estado=inativa]:[border:1px_solid_var(--line)] data-[estado=em\_tratamento]:[background:var(--info-50)] data-[estado=em\_tratamento]:[color:var(--info)] data-[estado=em\_quarentena\_observacao]:[background:var(--info-50)] data-[estado=em\_quarentena\_observacao]:[color:var(--info)] data-[estado=saudavel]:[background:var(--ok-50)] data-[estado=saudavel]:[color:var(--ok)] data-[estado=adotado]:[background:var(--primary-50)] data-[estado=adotado]:[color:var(--primary-700)] data-[estado=obito]:[background:var(--bg)] data-[estado=obito]:[color:var(--muted)] data-[estado=obito]:[border:1px_solid_var(--line)] max-[760px]:[grid-column:2] max-[760px]:[align-items:flex-start] max-[760px]:[text-align:left]" data-estado={animal.situacao}>
           {situacaoLabel[animal.situacao]}
         </span>
-        <span className="animal-side">
+        <span className="[&_small]:[color:var(--muted)] [&_small]:[font-size:13px] [display:flex] [flex-direction:column] [align-items:flex-end] [gap:2px] [text-align:right] [&_b]:[font-family:var(--mono)] [&_b]:[font-size:13px] max-[760px]:[grid-column:2] max-[760px]:[align-items:flex-start] max-[760px]:[text-align:left]">
           <b>{animal.baia?.codigo ?? "Sem baia"}</b>
         </span>
       </Link>
       {animal.alertas.length > 0 ? (
         <Tooltip>
           <TooltipTrigger asChild>
-            <button type="button" className="animal-alert-indicator">
+            <button type="button" className="[display:inline-flex] [align-items:center] [justify-content:flex-end] [gap:4px] [min-height:32px] [border:0] [background:transparent] [font:500_13px/1.2_var(--body)] [white-space:nowrap] [cursor:pointer] [color:var(--warn)] [font-weight:700] [&_svg]:[width:14px] [&_svg]:[height:14px] [&_svg]:[flex:none] max-[760px]:[justify-content:flex-start]">
               <AlertTriangle aria-hidden="true" />
               {alertaTexto}
             </button>
           </TooltipTrigger>
           <TooltipContent>
-            <ul className="alert-tooltip-list">
+            <ul className="[margin:0] [padding-left:16px] [display:flex] [flex-direction:column] [gap:4px]">
               {animal.alertas.map((alerta) => (
                 <li key={`${alerta.tipo}-${alerta.mensagem}`}>{alerta.mensagem}</li>
               ))}
@@ -554,10 +555,10 @@ function AnimalRow({ animal, podeEditar, onEdit }: { animal: Animal; podeEditar:
           </TooltipContent>
         </Tooltip>
       ) : (
-        <small className="animal-alert-none">{alertaTexto}</small>
+        <small className="[display:inline-flex] [align-items:center] [justify-content:flex-end] [gap:4px] [min-height:32px] [border:0] [background:transparent] [font:500_13px/1.2_var(--body)] [white-space:nowrap] [color:var(--muted)] max-[760px]:[justify-content:flex-start]">{alertaTexto}</small>
       )}
       {podeEditar ? (
-        <Button type="button" variant="outline" className="animal-row-edit" onClick={() => onEdit(animal)}>
+        <Button type="button" variant="outline" className="[align-self:center] max-[760px]:[width:100%]" onClick={() => onEdit(animal)}>
           <Edit3 aria-hidden="true" />
           Editar
         </Button>
@@ -712,9 +713,9 @@ function AnimalFormDrawer({
   return (
     <>
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="animal-form-dialog" showCloseButton={false}>
+      <DialogContent className="[max-width:min(760px,_calc(100vw_-_2rem))] [max-height:90vh] [overflow:auto] [gap:16px]" showCloseButton={false}>
         <DialogHeader>
-          <div className="drawer-top">
+          <div className="[display:flex] [align-items:flex-start] [justify-content:space-between] [gap:12px] [&_h2]:[margin:0] [&_h2]:[font-size:22px]">
             <div>
               <DialogTitle>{editando ? "Editar animal" : "Novo animal"}</DialogTitle>
               <DialogDescription>Etapa {step + 1} de 5 · {formSteps[step]}</DialogDescription>
@@ -726,7 +727,7 @@ function AnimalFormDrawer({
           </div>
         </DialogHeader>
 
-        <ol className="wizard-steps" aria-label="Etapas do formulário">
+        <ol className="[margin:0] [padding:0] [list-style:none] [display:grid] [grid-template-columns:repeat(5,_minmax(0,_1fr))] [gap:8px] [&_li]:[min-width:0] [&_li]:[border:1px_solid_var(--line)] [&_li]:[border-radius:8px] [&_li]:[background:#fff] [&_li]:[padding:8px] [&_li]:[color:var(--muted)] [&_li]:[font:700_12px/1.2_var(--body)] [&_li]:[display:flex] [&_li]:[align-items:center] [&_li]:[gap:6px] [&_span]:[width:22px] [&_span]:[height:22px] [&_span]:[border-radius:50%] [&_span]:[background:var(--bg)] [&_span]:[color:var(--muted)] [&_span]:[display:grid] [&_span]:[place-items:center] [&_span]:[flex:none] [&_span]:[font-size:12px] [&_svg]:[width:14px] [&_svg]:[height:14px] [&_li]:[border-color:var(--primary)] [&_li]:[background:var(--primary-50)] [&_li]:[color:var(--primary-700)] [&_li_span]:[background:var(--primary)] [&_li_span]:[color:#fff] max-[760px]:[grid-template-columns:1fr]" aria-label="Etapas do formulário">
           {formSteps.map((label, index) => (
             <li key={label} data-active={index === step} data-done={index < step}>
               <span>{index < step ? <Check aria-hidden="true" /> : index + 1}</span>
@@ -741,18 +742,18 @@ function AnimalFormDrawer({
           </Alert>
         ) : null}
 
-        <form className="drawer-form animal-wizard" onSubmit={(event) => event.preventDefault()}>
+        <form className="[display:flex] [flex-direction:column] [gap:14px] [min-height:0]" onSubmit={(event) => event.preventDefault()}>
           {step === 0 ? (
-            <div className="form-grid-2">
-              <div className="field">
-                <Label htmlFor="animal-form-nome">Nome <em className="req">*</em></Label>
+            <div className="[display:grid] [grid-template-columns:repeat(2,_minmax(0,_1fr))] [gap:12px] max-[760px]:[grid-template-columns:1fr]">
+              <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
+                <Label htmlFor="animal-form-nome">Nome <em className="[color:var(--crit)] [font-style:normal]">*</em></Label>
                 <Input id="animal-form-nome" value={form.nome} maxLength={120} onChange={(event) => update("nome", event.target.value)} />
               </div>
-              <div className="field">
-                <Label htmlFor="animal-form-registro">Número de registro <em className="req">*</em></Label>
-                <Input id="animal-form-registro" className="mono-input" value={form.numeroRegistro} maxLength={60} onChange={(event) => update("numeroRegistro", event.target.value)} />
+              <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
+                <Label htmlFor="animal-form-registro">Número de registro <em className="[color:var(--crit)] [font-style:normal]">*</em></Label>
+                <Input id="animal-form-registro" className="[font-family:var(--mono)] [font-size:14px]" value={form.numeroRegistro} maxLength={60} onChange={(event) => update("numeroRegistro", event.target.value)} />
               </div>
-              <div className="field">
+              <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
                 <Label htmlFor="animal-form-especie">Espécie</Label>
                 <ControlSelect
                   id="animal-form-especie"
@@ -769,54 +770,54 @@ function AnimalFormDrawer({
           ) : null}
 
           {step === 1 ? (
-            <div className="form-grid-2">
-              <div className="field">
+            <div className="[display:grid] [grid-template-columns:repeat(2,_minmax(0,_1fr))] [gap:12px] max-[760px]:[grid-template-columns:1fr]">
+              <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
                 <Label htmlFor="animal-form-sexo">Sexo</Label>
                 <ControlSelect id="animal-form-sexo" value={form.sexo} onValueChange={(value) => update("sexo", value as SexoAnimal)} options={sexos.map((sexo) => ({ value: sexo, label: sexoLabel[sexo] }))} />
               </div>
-              <div className="field">
+              <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
                 <Label htmlFor="animal-form-porte">Porte</Label>
                 <ControlSelect id="animal-form-porte" value={form.porte} onValueChange={(value) => update("porte", value as PorteAnimal)} options={portes.map((porte) => ({ value: porte, label: porteLabel[porte] }))} />
               </div>
-              <div className="field">
+              <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
                 <Label htmlFor="animal-form-pelagem">Cor/pelagem</Label>
                 <Input id="animal-form-pelagem" value={form.corPelagem} maxLength={80} onChange={(event) => update("corPelagem", event.target.value)} />
               </div>
-              <div className="field">
+              <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
                 <Label htmlFor="animal-form-castrado">Castração</Label>
                 <ControlSelect id="animal-form-castrado" value={form.castrado} onValueChange={(value) => update("castrado", value as StatusCastracaoAnimal)} options={castracoes.map((castracao) => ({ value: castracao, label: castradoLabel[castracao] }))} />
               </div>
-              <div className="field">
+              <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
                 <Label htmlFor="animal-form-peso">Peso atual em kg</Label>
                 <Input id="animal-form-peso" type="number" min="0.001" step="0.001" inputMode="decimal" value={form.pesoAtualKg} onChange={(event) => update("pesoAtualKg", event.target.value)} />
               </div>
-              <div className="field">
+              <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
                 <Label htmlFor="animal-form-nascimento">Data de nascimento</Label>
                 <Input id="animal-form-nascimento" type="date" value={form.dataNascimento} onChange={(event) => update("dataNascimento", event.target.value)} />
               </div>
-              <div className="field">
+              <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
                 <Label htmlFor="animal-form-idade-qtd">Idade estimada</Label>
                 <Input id="animal-form-idade-qtd" type="number" min="0" step="1" inputMode="numeric" value={form.idadeEstimadaQuantidade} onChange={(event) => update("idadeEstimadaQuantidade", event.target.value)} />
               </div>
-              <div className="field">
+              <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
                 <Label htmlFor="animal-form-idade-unidade">Unidade</Label>
                 <ControlSelect id="animal-form-idade-unidade" value={form.idadeEstimadaUnidade} onValueChange={(value) => update("idadeEstimadaUnidade", value as UnidadeIdadeAnimal)} options={unidadesIdade.map((unidade) => ({ value: unidade, label: unidadeLabel(unidade) }))} />
               </div>
-              <CheckFilter id="animal-form-idade-aprox" label="Idade aproximada" checked={form.idadeAproximada} onCheckedChange={(checked) => update("idadeAproximada", checked)} />
+              <BinarySwitch id="animal-form-idade-aprox" label="Idade aproximada" checked={form.idadeAproximada} onCheckedChange={(checked) => update("idadeAproximada", checked)} />
             </div>
           ) : null}
 
           {step === 2 ? (
-            <div className="form-grid-2">
-              <div className="field">
-                <Label htmlFor="animal-form-acolhimento">Data de acolhimento <em className="req">*</em></Label>
+            <div className="[display:grid] [grid-template-columns:repeat(2,_minmax(0,_1fr))] [gap:12px] max-[760px]:[grid-template-columns:1fr]">
+              <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
+                <Label htmlFor="animal-form-acolhimento">Data de acolhimento <em className="[color:var(--crit)] [font-style:normal]">*</em></Label>
                 <Input id="animal-form-acolhimento" type="date" value={form.dataAcolhimento} onChange={(event) => update("dataAcolhimento", event.target.value)} />
               </div>
-              <div className="field">
+              <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
                 <Label htmlFor="animal-form-acolhido-por">Acolhido por</Label>
                 <Input id="animal-form-acolhido-por" value={form.acolhidoPor} maxLength={120} onChange={(event) => update("acolhidoPor", event.target.value)} />
               </div>
-              <div className="field">
+              <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
                 <Label htmlFor="animal-form-situacao">Situação</Label>
                 <ControlSelect
                   id="animal-form-situacao"
@@ -825,7 +826,7 @@ function AnimalFormDrawer({
                   options={situacoes.filter((situacao) => situacao !== "adotado").map((situacao) => ({ value: situacao, label: situacaoLabel[situacao] }))}
                 />
               </div>
-              <div className="field">
+              <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
                 <Label htmlFor="animal-form-baia">Baia</Label>
                 <ControlSelect
                   id="animal-form-baia"
@@ -837,9 +838,9 @@ function AnimalFormDrawer({
                   ]}
                 />
               </div>
-              <CheckFilter id="animal-form-nasceu" label="Nasceu no CCZ" checked={form.nasceuNoCcz} onCheckedChange={(checked) => update("nasceuNoCcz", checked)} />
-              <CheckFilter id="animal-form-isolamento" label="Em isolamento clínico" checked={form.emIsolamento} onCheckedChange={(checked) => update("emIsolamento", checked)} />
-              <div className="field" style={{ gridColumn: "1 / -1" }}>
+              <BinarySwitch id="animal-form-nasceu" label="Nasceu no CCZ" checked={form.nasceuNoCcz} onCheckedChange={(checked) => update("nasceuNoCcz", checked)} />
+              <BinarySwitch id="animal-form-isolamento" label="Em isolamento clínico" checked={form.emIsolamento} onCheckedChange={(checked) => update("emIsolamento", checked)} />
+              <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]" style={{ gridColumn: "1 / -1" }}>
                 <Label htmlFor="animal-form-alocacao-obs">Observação da alocação</Label>
                 <Input id="animal-form-alocacao-obs" value={form.observacaoAlocacao} onChange={(event) => update("observacaoAlocacao", event.target.value)} />
               </div>
@@ -872,7 +873,7 @@ function AnimalFormDrawer({
             </Button>
           ) : (
             <Button type="button" disabled={saving} onClick={() => void salvar()}>
-              {saving ? <Loader2 className="spin" aria-hidden="true" /> : <Check aria-hidden="true" />}
+              {saving ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Check aria-hidden="true" />}
               {editando ? "Salvar edição" : "Cadastrar"}
             </Button>
           )}
@@ -912,7 +913,7 @@ function RacaFields({
 }) {
   return (
     <>
-      <div className="field">
+      <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
         <Label htmlFor="animal-form-raca">Raça</Label>
         <Combobox
           id="animal-form-raca"
@@ -924,7 +925,7 @@ function RacaFields({
         />
       </div>
       {form.racaId === "nova" ? (
-        <div className="field">
+        <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
           <Label htmlFor="animal-form-nova-raca">Nome da raça</Label>
           <Input id="animal-form-nova-raca" value={form.novaRaca} maxLength={80} onChange={(event) => onUpdate("novaRaca", event.target.value)} />
         </div>
@@ -949,14 +950,14 @@ function FotoStep({
   onRemoveExistente: (fotoId: number) => void;
 }) {
   return (
-    <div className="photo-step">
+    <div className="[display:flex] [flex-direction:column] [gap:14px]">
       <PhotoPicker
         remaining={MAX_FOTOS - totalFotos}
         hint={`${totalFotos}/${MAX_FOTOS} fotos. Recorte em quadrado e a API comprime quando necessário.`}
         onPicked={onAdd}
       />
       {totalFotos > 0 ? (
-        <div className="photo-grid">
+        <div className="[display:grid] [grid-template-columns:repeat(auto-fill,_minmax(124px,_1fr))] [gap:10px] [&_figure]:[margin:0] [&_figure]:[border:1px_solid_var(--line)] [&_figure]:[border-radius:8px] [&_figure]:[padding:8px] [&_figure]:[display:flex] [&_figure]:[flex-direction:column] [&_figure]:[gap:8px] [&_figure]:[background:#fff] [&_img]:[width:100%] [&_img]:[aspect-ratio:1_/_1] [&_img]:[object-fit:cover] [&_img]:[border-radius:6px] [&_img]:[background:var(--bg)] [&_figcaption]:[color:var(--muted)] [&_figcaption]:[font-size:12px] [&_figcaption]:[overflow-wrap:anywhere]">
           {fotosExistentes.map((foto) => (
             <figure key={foto.id}>
               <AnimalPhoto foto={foto} alt="" />
@@ -979,7 +980,7 @@ function FotoStep({
           ))}
         </div>
       ) : (
-        <p className="hint">Você pode cadastrar agora sem foto e completar a galeria depois.</p>
+        <p className="[font-size:13px] [color:var(--muted)] [overflow-wrap:anywhere]">Você pode cadastrar agora sem foto e completar a galeria depois.</p>
       )}
     </div>
   );
@@ -989,7 +990,7 @@ function ReviewStep({ form, racas, baias, totalFotos }: { form: AnimalFormState;
   const raca = form.racaId === "nova" ? form.novaRaca : racas.find((item) => String(item.id) === form.racaId)?.nome;
   const baia = baias.find((item) => String(item.id) === form.baiaId);
   return (
-    <dl className="meta review-meta">
+    <dl className="[display:grid] [grid-template-columns:repeat(2,_minmax(0,_1fr))] [gap:12px_16px] [margin:0] [&_div]:[display:flex] [&_div]:[flex-direction:column] [&_div]:[gap:2px] [&_dt]:[font-size:12px] [&_dt]:[font-weight:600] [&_dt]:[color:var(--muted)] [&_dd]:[margin:0] [&_dd]:[font-size:15px] max-[760px]:[grid-template-columns:1fr] [grid-template-columns:repeat(2,_minmax(0,_1fr))] max-[760px]:[grid-template-columns:1fr]">
       <Info label="Nome" value={form.nome || "Não informado"} />
       <Info label="Registro" value={form.numeroRegistro || "Não informado"} />
       <Info label="Espécie" value={especieLabel[form.especie]} />
@@ -1181,6 +1182,28 @@ function previewUrl(file: File) {
   return url;
 }
 
+function BinarySwitch({
+  id,
+  label,
+  checked,
+  onCheckedChange,
+}: {
+  id: string;
+  label: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}) {
+  return (
+    <div className="flex min-h-11 flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-lg border border-[var(--line)] bg-white px-2.5 py-2 text-[13px]">
+      <Label className="min-w-0 flex-1 leading-snug" htmlFor={id}>{label}</Label>
+      <span className="flex shrink-0 items-center gap-2">
+        <span className="text-xs font-semibold text-[var(--muted)]">{checked ? "Sim" : "Não"}</span>
+        <Switch id={id} checked={checked} onCheckedChange={onCheckedChange} />
+      </span>
+    </div>
+  );
+}
+
 function CheckFilter({
   id,
   label,
@@ -1193,7 +1216,7 @@ function CheckFilter({
   onCheckedChange: (checked: boolean) => void;
 }) {
   return (
-    <label className="checkline animal-checkline" htmlFor={id}>
+    <label className="[min-height:42px] [display:flex] [align-items:center] [gap:10px] [color:var(--ink)] [font-weight:600] [min-height:42px] [border:1px_solid_var(--line)] [border-radius:8px] [background:#fff] [padding:8px_10px] [font-size:13px]" htmlFor={id}>
       <Checkbox id={id} checked={checked} onCheckedChange={(value) => onCheckedChange(value === true)} />
       {label}
     </label>
@@ -1202,7 +1225,7 @@ function CheckFilter({
 
 function Metric({ label, value, tone }: { label: string; value: number; tone?: "ok" | "info" | "warn" | "crit" }) {
   return (
-    <div className="metric" data-tone={tone}>
+    <div className="[min-height:82px] [border:1px_solid_var(--line)] [border-radius:8px] [background:var(--surface)] [padding:14px] [box-shadow:var(--shadow)] [display:flex] [flex-direction:column] [justify-content:center] [gap:4px] [&_b]:[font:700_26px/1_var(--display)] [&_b]:[color:var(--primary-700)] [&_span]:[color:var(--muted)] [&_span]:[font-size:13px] data-[tone=ok]:[&_b]:[color:var(--ok)] data-[tone=info]:[&_b]:[color:var(--info)] data-[tone=warn]:[&_b]:[color:var(--warn)] data-[tone=crit]:[&_b]:[color:var(--crit)]" data-tone={tone}>
       <b>{value}</b>
       <span>{label}</span>
     </div>
@@ -1245,11 +1268,11 @@ function chipsFiltro(filtros: ListarAnimaisFiltros, baias: Baia[]) {
 
 function AnimaisSkeleton() {
   return (
-    <div className="stack" aria-label="Carregando animais">
+    <div className="[display:flex] [flex-direction:column] [gap:12px]" aria-label="Carregando animais">
       {Array.from({ length: 5 }, (_, index) => (
-        <div className="animal-row skeleton-row" key={index}>
-          <Skeleton className="animal-photo" />
-          <div className="stack">
+        <div className="[width:100%] [min-height:84px] [border:1px_solid_var(--line)] [border-radius:8px] [background:#fff] [color:var(--ink)] [padding:12px] [display:grid] [grid-template-columns:minmax(0,_1fr)_auto_auto] [align-items:center] [gap:12px] hover:[border-color:var(--primary)] hover:[background:var(--primary-50)] focus-visible:[border-color:var(--primary)] focus-visible:[background:var(--primary-50)] has-[[data-detail=open]]:[border-color:var(--primary)] has-[[data-detail=open]]:[box-shadow:var(--focus)] max-[760px]:[grid-template-columns:1fr] max-[760px]:[align-items:start] [pointer-events:none]" key={index}>
+          <Skeleton className="[width:60px] [height:60px] [border-radius:8px] [background:var(--primary-50)] [color:var(--primary)] [display:grid] [place-items:center] [overflow:hidden] [&_img]:[width:100%] [&_img]:[height:100%] [&_img]:[object-fit:cover] [&_svg]:[width:26px] [&_svg]:[height:26px] max-[760px]:[width:52px] max-[760px]:[height:52px]" />
+          <div className="[display:flex] [flex-direction:column] [gap:12px]">
             <Skeleton className="h-5 w-48" />
             <Skeleton className="h-4 w-36" />
           </div>

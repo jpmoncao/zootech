@@ -1,0 +1,28 @@
+---
+description: Estilo do apps/web é Tailwind e componentes shadcn no tema ZooTech
+globs: apps/web/**/*.{tsx,css}
+alwaysApply: false
+---
+
+# Tailwind e shadcn
+
+A interface em `apps/web` usa utilitários Tailwind no JSX e componentes shadcn em `apps/web/src/components/ui`.
+
+- Layout, espaçamento, tipografia e estados visuais de tela vão em `className` com Tailwind. Não crie classes de página em `globals.css` (`.animal-row`, `.baia-tile`, `.panel`).
+- `globals.css` guarda tokens (`:root`, `@theme`), reset e base. Não acrescente CSS de feature.
+- Botão, campo, seleção, diálogo, menu, aba, alerta e equivalentes vêm do shadcn. Não recrie esses controles com elemento nativo e classe própria.
+- O tema segue `DESIGN.md`: petróleo `#135E63`, névoa `#F4F7F6`, Figtree na interface, raios 6 (campo), 8 (botão) e 10 (painel). Âmbar `#E8A317` só no escudo provisório.
+- Instale peça nova com o CLI do shadcn dentro de `apps/web` e ajuste o componente gerado aos tokens.
+- Ícone é SVG do próprio componente ou de biblioteca já adotada. Não use emoji no lugar de ícone.
+
+```tsx
+// ruim
+<button className="btn btn-primary" type="submit">Entrar</button>
+<div className="animal-row">…</div>
+
+// certo
+import { Button } from "@/components/ui/button";
+
+<Button type="submit">Entrar</Button>
+<div className="grid min-h-[84px] grid-cols-[minmax(0,1fr)_auto_auto] gap-3 rounded-lg border bg-white p-3">…</div>
+```

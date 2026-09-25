@@ -14,6 +14,7 @@ For every coding task in this project, follow this workflow.
 
 - Read `.ai-context/overview.md` and `.ai-context/short-term.md` when they exist.
 - Read other files in `.ai-context/` when they are relevant to the task.
+- When changing `apps/web`, follow **Front-end in apps/web** below and the visual tokens in `DESIGN.md`.
 - Inspect relevant files before editing.
 - Prefer `rg` and `rg --files` for searching.
 - Learn the existing architecture, naming, style, and test patterns.
@@ -34,6 +35,7 @@ For every coding task in this project, follow this workflow.
 - Keep behavior changes explicit and intentional.
 - Add comments only when they clarify non-obvious logic.
 - Do not overwrite or revert user changes unless explicitly asked.
+- In `apps/web`, use shadcn/ui for controls and Tailwind utilities for layout. Do not add feature CSS classes in `globals.css`.
 
 ## 5. Verify
 
@@ -66,3 +68,23 @@ For every coding task in this project, follow this workflow.
 - List how the work was verified.
 - Provide concrete examples of how to test the change.
 - Mention risks, limitations, or useful follow-ups.
+
+## Front-end in apps/web
+
+`apps/web` uses shadcn/ui and Tailwind. Ready-made controls live in `apps/web/src/components/ui`. Screens and shells stay outside that folder.
+
+- Button, field, select, dialog, menu, tab, alert and equivalents come from shadcn. Do not rebuild those with a native element and a custom class.
+- Screen layout, grids and visual states use Tailwind on `className`. Do not create feature classes in `globals.css`.
+- Theme follows `DESIGN.md`: petroleum `#135E63`, mist `#F4F7F6`, Figtree in the UI, radii 6 (field), 8 (button) and 10 (panel). Amber `#E8A317` only on the provisional shield. Do not ship the default shadcn theme.
+- Install a new piece with the shadcn CLI inside `apps/web`, then adjust the generated component to those tokens.
+- Icons are SVG from the component or from a library already in the app. Do not use emoji as an icon.
+
+```tsx
+// bad — hand-drawn control and page CSS
+<button className="btn btn-primary" type="submit">Entrar</button>
+
+// good — shadcn, ZooTech theme, layout in Tailwind
+import { Button } from "@/components/ui/button";
+
+<Button type="submit">Entrar</Button>
+```
