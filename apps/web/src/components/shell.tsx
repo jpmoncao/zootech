@@ -16,22 +16,9 @@ import {
 } from "../lib/api";
 import { navGroups, painelItem, type NavItem } from "../lib/nav";
 import { readPosto, writePosto } from "../lib/session";
-import { Mark } from "./mark";
+import { Mark } from "./mark"
 
 const postos = ["Balcão", "Canil", "Gatil", "Sala de vacina"] as const;
-
-const icons: Record<string, string> = {
-  painel: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z",
-  animais: "M12 21c6-3 8-7 8-11V6l-8-3-8 3v4c0 4 2 8 8 11z",
-  baias: "M4 20V8l8-4 8 4v12H4z",
-  vacinacao: "M14 4l6 6-8 8H6v-6l8-8z",
-  castracoes: "M12 4v16M6 8h12",
-  adocoes: "M12 20s-7-4.4-7-9a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 4.6-7 9-7 9z",
-  observacao: "M2 12s4-6 10-6 10 6 10 6-4 6-10 6S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z",
-  denuncias: "M12 3l9 16H3L12 3z",
-  relatorios: "M6 20V10M12 20V4M18 20v-7",
-  acessos: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM19 8v6M22 11h-6",
-};
 
 type ShellProps = {
   section: string;
@@ -280,9 +267,7 @@ function EmptySection({ title }: { title: string }) {
 function NavLink({ item, current }: { item: NavItem; current: string }) {
   return (
     <Link className="nav-link" href={item.href} aria-current={item.id === current ? "page" : undefined}>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden="true">
-        <path d={icons[item.id]} />
-      </svg>
+      <item.icon className="nav-icon" size={20} aria-hidden="true" />
       <span>{item.label}</span>
     </Link>
   );

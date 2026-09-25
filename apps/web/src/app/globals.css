@@ -588,7 +588,7 @@ p {
 }
 
 .nav-link svg {
-  display: none;
+  display: block;
   flex: none;
 }
 

@@ -599,13 +599,6 @@ function BaiaActions({ baia, onChanged }: { baia: Baia; onChanged: (id: number) 
   return (
     <section className="detail-section">
       <h2>Ações operacionais</h2>
-      {baia.ocupacao > 0 ? (
-        <Alert variant="destructive">
-          <AlertDescription className="text-inherit">
-            Transfira os ocupantes antes de interditar, inativar ou higienizar.
-          </AlertDescription>
-        </Alert>
-      ) : null}
       <form className="action-form" onSubmit={submit}>
         <div className="action-grid" role="group" aria-label="Ações permitidas">
           {acoes.map((item) => (
@@ -698,7 +691,6 @@ function BaiaForm({
         <div className="drawer-top">
           <div>
             <h2>{editing ? "Editar baia" : "Nova baia"}</h2>
-            <p className="hint">Os dados preenchidos permanecem se a API retornar validação.</p>
           </div>
           <Button type="button" variant="ghost" size="icon" aria-label="Fechar" onClick={onClose}>
             <X aria-hidden="true" />

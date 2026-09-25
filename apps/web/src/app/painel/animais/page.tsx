@@ -303,9 +303,6 @@ function Animais() {
         <div className="section-title">
           <div>
             <h2>Plantel operacional</h2>
-            <p className="hint">
-              Adotados e óbitos ficam ocultos até você usar o filtro de situações terminais.
-            </p>
           </div>
           <SlidersHorizontal aria-hidden="true" />
         </div>

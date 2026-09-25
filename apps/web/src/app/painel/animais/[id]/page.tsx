@@ -378,12 +378,12 @@ function Ficha({
       </section>
 
       <section className="panel animal-card" id="dados-ficha" aria-label="Dados da ficha">
-        <SectionHeader icon={<Edit3 aria-hidden="true" />} title="Dados da ficha" note={podeEditar ? "Edite os campos principais sem sair da ficha." : "Somente consulta."} />
+        <SectionHeader icon={<Edit3 aria-hidden="true" />} title="Dados da ficha" note={podeEditar ? "" : "Somente consulta."} />
         <AnimalEditForm animal={animal} disabled={!podeEditar} onChanged={onChanged} onDirtyChange={onDirtyChange} />
       </section>
 
       <section className="panel animal-card" id="baia-ficha" aria-label="Baia e localização">
-        <SectionHeader icon={<MapPin aria-hidden="true" />} title="Baia e localização" note="Alocação opcional, com ocupação real da API." />
+        <SectionHeader icon={<MapPin aria-hidden="true" />} title="Baia e localização" note="Alocação opcional" />
         <BaiaCard animal={animal} baias={baias} disabled={!podeEditar} onChanged={onChanged} />
       </section>
 
