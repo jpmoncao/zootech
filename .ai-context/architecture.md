@@ -2,13 +2,13 @@
 
 ## System Summary
 
-Monorepo pnpm e Turborepo com `apps/web` (Next.js: login, casca do painel, Acessos, perfil, baias e animais) e `apps/api` (NestJS com auth JWT, usuários, baias, animais e `GET /health`). Postgres local está no `compose.yaml`, com migrações Prisma `auth_core`, `gestao_baias` e `gestao_animais`. O domínio de animais tem persistência, API, ocupação real integrada às baias, fotos locais com caminho relativo e telas de lista, cadastro em modal e ficha dedicada.
+Monorepo pnpm e Turborepo com `apps/web` (Next.js: login, casca do painel, Acessos, perfil, baias, animais e castrações) e `apps/api` (NestJS com auth JWT, usuários, baias, animais, castrações em rotas de animais e `GET /health`). Postgres local está no `compose.yaml`, com migrações Prisma `auth_core`, `gestao_baias`, `gestao_animais`, fotos relativas e castrações. O domínio de animais tem persistência, API, ocupação real integrada às baias, fotos locais com caminho relativo e telas de lista, cadastro em modal e ficha dedicada.
 
 ## Main Modules
 
-- `apps/web`: Next.js com tela de entrar, casca do painel, `/painel/acessos`, `/painel/perfil`, `/painel/baias` e `/painel/animais` com ficha `/painel/animais/[id]`. Cliente HTTP em `src/lib/api.ts` (JWT em memória, refresh via cookie). Menu filtrado por papel em `src/lib/access.ts`.
-- `apps/api`: NestJS com módulos `auth`, `users`, `baias`, `animais` e `prisma`. Baias oferece consulta, CRUD coordenado, ações operacionais e histórico. Animais oferece CRUD autenticado, raças, observações, pesagens, eventos simples, timeline, revogação terminal e galeria de fotos local. Escuta em `0.0.0.0` e `PORT` (padrão 3001). `GET /health` não consulta o banco. Seed de coordenação e de raças no boot (`src/seed.ts`).
-- `apps/api/prisma`: esquema e migrações de autenticação, baias e persistência de animais.
+- `apps/web`: Next.js com tela de entrar, casca do painel, `/painel/acessos`, `/painel/perfil`, `/painel/baias`, `/painel/animais` com ficha `/painel/animais/[id]` e `/painel/castracoes`. Cliente HTTP em `src/lib/api.ts` (JWT em memória, refresh via cookie). Menu filtrado por papel em `src/lib/access.ts`.
+- `apps/api`: NestJS com módulos `auth`, `users`, `baias`, `animais` e `prisma`. Baias oferece consulta, CRUD coordenado, ações operacionais e histórico. Animais oferece CRUD autenticado, raças, observações, pesagens, eventos simples, timeline, revogação terminal, galeria de fotos local e operações de castração. Escuta em `0.0.0.0` e `PORT` (padrão 3001). `GET /health` não consulta o banco. Seed de coordenação e de raças no boot (`src/seed.ts`).
+- `apps/api/prisma`: esquema e migrações de autenticação, baias, animais, fotos e castrações.
 - `compose.yaml`: Postgres 17 local.
 - `tsconfig.base.json` e `eslint.config.mjs`: config compartilhada.
 
@@ -33,8 +33,10 @@ Postgres via Prisma. Tabelas deste marco:
 - `AuditoriaEvento` — tipo, usuário e dados JSON.
 - `Baia` — código e código normalizado único, setor, tipo, capacidade, área opcional, solário, exclusividade de isolamento, estado e última higienização. A API retorna ocupantes reais a partir de `Animal.baiaId`, com ocupação e vagas disponíveis. Eventos identificam `entidade: "baia"` e `entidadeId` string em `dados` da auditoria.
 - `RacaAnimal` — raça por espécie (`cao`/`gato`), nome normalizado único por espécie, tipo (`catalogo`, `srd`, `outra`, `nao_informada`, `personalizada`) e marca de catálogo padrão.
-- `Animal` — identificação, número de registro normalizado único, espécie, raça opcional, sexo/porte/castração com `nao_informado`, situação, `emIsolamento`, peso atual, datas/idade estimada, `baiaId` opcional, autor e acolhedor textual.
-- `FotoAnimal`, `PesagemAnimal`, `ObservacaoAnimal`, `EventoAnimal` — galeria, pesagens append-only, observações append-only e timeline/eventos do animal. A migration adiciona índice parcial para uma única foto de identificação por animal.
+- `Animal` — identificação, número de registro normalizado único, espécie, raça opcional, sexo/porte, situação, `emIsolamento`, peso atual, datas/idade estimada, `baiaId` opcional, autor e acolhedor textual. O campo legado `castrado` foi removido do schema; status de castração passa a ser derivado de `CastracaoAnimal`.
+- `CastracaoAnimal` — avaliação ou procedimento vinculado ao animal, com estado (`nao_castrado`, `agendada`, `realizada`, `cancelada`), origem (`fluxo` ou `legada`), data/hora planejada, data efetiva com indicador de hora conhecida, data de avaliação, observação, motivo de cancelamento e autor. Índices parciais no SQL garantem no máximo um agendamento ativo e no máximo um procedimento realizado por animal. A migration `20260925120000_gestao_castracoes_modelo` converte `castrado = sim` para procedimento legado realizado sem data, `castrado = nao` para avaliação legada “Não castrado” e `nao_informado` para ausência de registro.
+- `GET /animais/castracoes` oferece consulta paginada dos procedimentos, com estado, período e busca por nome ou registro. A página `/painel/castracoes` consome essa consulta e executa as transições nas rotas por animal. A API de animais retorna `estadoCastracao` derivado dos registros em lista e detalhe; a ficha apresenta histórico e ações de castração sem editar o status pelo formulário de animal.
+- `FotoAnimal`, `PesagemAnimal`, `ObservacaoAnimal`, `EventoAnimal` — galeria, pesagens append-only, observações append-only e timeline/eventos do animal. Castrações gravam eventos do tipo `castracao` junto da auditoria na mesma transação. A migration adiciona índice parcial para uma única foto de identificação por animal.
 
 Arquivos de fotos ficam fora do banco, sob `ZOOTECH_MEDIA_ROOT` ou `MEDIA_ROOT`, resolvidos a partir de `apps/api` (padrão `storage/media`). `FotoAnimal.caminhoAbsoluto` guarda caminho relativo (`animais/{id}/{uuid}.webp`); a leitura/remoção restringe-se à raiz gerenciada. O recorte quadrado acontece no front; a API valida formato/quadrado, comprime para WebP até 1200×1200 e serve pela rota autenticada. O limite de galeria é 10 fotos por animal.
 
@@ -65,7 +67,7 @@ Relações vigentes:
 - Um `Animal` ocupa zero ou uma `Baia`. Uma baia abriga zero ou mais animais.
 - Um `Animal` possui exatamente um `Prontuario`.
 - Um `Prontuario` contém zero ou mais `RegistroVacina`.
-- Um `Animal` tem zero ou uma `Castracao`.
+- Um `Animal` tem zero ou mais registros em `CastracaoAnimal`, preservando tentativas canceladas; por restrição, há no máximo um agendamento ativo e um procedimento realizado.
 - Um `Animal` tem zero ou uma `Adocao`. A adoção é o momento em que o animal recebe o tutor.
 - Um `Funcionario` atende zero ou mais `Prontuario`.
 
@@ -201,7 +203,7 @@ O painel do veterinário ADM reúne todas as funcionalidades do sistema, mais a 
 
 ## Testing Strategy
 
-Jest e supertest em `apps/api` cobrem `GET /health`, as regras de auth (pedido, login, 403, aceite, CRMV, troca de tipo, última coordenação), baias (consulta autenticada, autorização por perfil, duplicidade normalizada de código, capacidade, filtros, transições de estado, higienização, ocupantes reais, bloqueio por ocupação e auditoria) e animais (quatro perfis, 401, CRUD sem DELETE, número duplicado, espécie/raça, criação mínima, lista com terminais ocultos por padrão, observações append-only, pesagens, eventos, timeline, auditoria, revogação terminal, alocação/transferência/saída de baia, capacidade, isolamento, concorrência pela última vaga, upload de fotos, formatos inválidos, fonte acima de 5 MB, crop/compressão, 10ª/11ª foto, colisão concorrente, entrega controlada, remoção/limpeza e path traversal). A persistência inicial de animais foi verificada com `prisma generate`, migration local, typecheck API, seed duplo e checagem temporária de preservação de raça personalizada. O front não tem testes automatizados; fluxos são validados por typecheck, lint, build e verificação manual no navegador.
+Jest e supertest em `apps/api` cobrem `GET /health`, as regras de auth (pedido, login, 403, aceite, CRMV, troca de tipo, última coordenação), baias (consulta autenticada, autorização por perfil, duplicidade normalizada de código, capacidade, filtros, transições de estado, higienização, ocupantes reais, bloqueio por ocupação e auditoria) e animais (quatro perfis, 401, CRUD sem DELETE, número duplicado, espécie/raça, criação mínima, lista com terminais ocultos por padrão, observações append-only, pesagens, eventos, timeline, auditoria, revogação terminal, alocação/transferência/saída de baia, capacidade, isolamento, concorrência pela última vaga, upload de fotos, formatos inválidos, fonte acima de 5 MB, crop/compressão, 10ª/11ª foto, colisão concorrente, entrega controlada, remoção/limpeza e path traversal). Castrações têm cobertura para consulta global, 401, acesso dos quatro perfis, autoria, avaliação, agendamento, reagendamento, conclusão, cancelamento, nova tentativa após cancelamento, bloqueio de agendamento/procedimento duplicado, animal terminal, estado derivado e rollback quando auditoria falha. A persistência inicial de animais foi verificada com `prisma generate`, migration local, typecheck API, seed duplo e checagem temporária de preservação de raça personalizada. As migrations de castração foram aplicadas no Postgres local e a suíte da API valida os fluxos principais. O front não tem testes automatizados; fluxos são validados por typecheck, lint, build e verificação manual no navegador.
 
 ## Local Development
 

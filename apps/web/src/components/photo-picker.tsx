@@ -12,7 +12,7 @@ export function PhotoPicker({
   disabled,
   remaining,
   label = "Adicionar fotos",
-  hint = "JPG, PNG ou WebP. Recorte em quadrado antes de enviar.",
+  hint = "Selecione até 10 fotos para esse animal.",
   onPicked,
 }: {
   disabled?: boolean;

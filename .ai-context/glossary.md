@@ -61,7 +61,7 @@ Registro consultável pelo ADM/Coordenação no escopo administrativo e pela fic
 
 ### Timeline do animal
 
-Histórico cronológico reverso em `EventoAnimal`, alimentado por criação, edição, mudança de situação, mudança de baia, observação, pesagem, exame, diagnóstico e revogação de situação terminal. Observações e pesagens também têm tabelas append-only próprias; o evento dá a visão unificada da ficha.
+Histórico cronológico reverso em `EventoAnimal`, alimentado por criação, edição, mudança de situação, mudança de baia, observação, pesagem, foto, exame, diagnóstico, castração e revogação de situação terminal. Observações e pesagens também têm tabelas append-only próprias; o evento dá a visão unificada da ficha.
 
 ### Prontuário
 
@@ -73,7 +73,7 @@ Aplicação de vacina ligada ao prontuário: nome, lote, data de aplicação e d
 
 ### Castração
 
-Pedido, cirurgia e pós-operatório de um animal. O diagrama limita a zero ou um registro por animal. A fila (`statusFila`) é operada pelo funcionário; agendar e executar é do veterinário.
+Avaliação ou tentativa de procedimento de um animal. No banco, `CastracaoAnimal` guarda origem (`fluxo` ou `legada`), tipo (`avaliacao` ou `procedimento`), estado (`nao_castrado`, `agendada`, `realizada`, `cancelada`), datas conhecidas, observação, motivo de cancelamento e autor. O campo de resposta `estadoCastracao` é derivado desses registros: realizada prevalece sobre agendada, avaliação de não castrado e cancelamento; ausência de registro significa “Não informado”, não “Não castrado”. Pode haver várias tentativas canceladas, mas só um agendamento ativo e só um procedimento realizado por animal.
 
 ### Adoção
 

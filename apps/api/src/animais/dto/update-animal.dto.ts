@@ -21,7 +21,6 @@ export class UpdateAnimalDto {
   @IsOptional() @IsString() @MaxLength(80) corPelagem?: string | null;
   @IsOptional() @IsIn(["em_tratamento", "em_quarentena_observacao", "saudavel", "obito"]) situacao?: "em_tratamento" | "em_quarentena_observacao" | "saudavel" | "obito";
   @IsOptional() @IsBoolean() emIsolamento?: boolean;
-  @IsOptional() @IsIn(["sim", "nao", "nao_informado"]) castrado?: "sim" | "nao" | "nao_informado";
   @IsOptional() @Type(() => Number) @IsNumber() @Min(0.001) pesoAtualKg?: number | null;
   @IsOptional() @IsDateString() dataAcolhimento?: string | null;
   @IsOptional() @IsDateString() dataNascimento?: string | null;

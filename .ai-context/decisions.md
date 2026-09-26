@@ -230,7 +230,7 @@
 
 **Decision:** Usar enums Prisma para espécie, sexo, porte, situação, castração, unidade de idade e tipo de evento. `Animal` guarda número de registro textual e chave normalizada única; `baiaId`, `racaId`, datas, idade estimada e autor são opcionais para suportar pendência/importação sem dados falsos. Raças ficam em `RacaAnimal` com chave única por espécie + nome normalizado. Fotos, pesagens, observações e eventos ficam em tabelas próprias; observações e eventos são append-only no modelo da aplicação.
 
-**Rationale:** Esse desenho acompanha a spec sem antecipar módulos de vacinação, castração ou adoção e prepara a integração futura com baias e timeline auditável.
+**Rationale:** Esse desenho acompanhou a spec inicial sem antecipar vacinação, castração ou adoção e preparou a integração com baias e timeline auditável. Castração foi posteriormente materializada em `CastracaoAnimal`.
 
 **Consequences:** Migration `20260924180000_gestao_animais` cria as tabelas e constraints básicas. A aplicação ainda precisa validar coerência espécie/raça, obrigatoriedade de campos mínimos, estados terminais e ausência de exclusão no módulo `animais`.
 
@@ -258,3 +258,15 @@
 **Rationale:** Caminho relativo sobrevive a mudanças de diretório de execução. Recusar foto não quadrada preserva o recorte escolhido pelo usuário.
 
 **Consequences:** Clientes da API que enviarem imagem retangular recebem 400. A URL pública continua sendo a rota autenticada `/animais/:id/fotos/:fotoId/arquivo`.
+
+## 2026-09-25 — Castração sai do campo isolado e vira histórico
+
+**Status:** Accepted
+
+**Context:** O módulo de castrações precisa preservar status legados sem inventar datas e permitir agenda, cancelamentos preservados e histórico por animal.
+
+**Decision:** Remover `Animal.castrado` do schema e representar o status por registros em `CastracaoAnimal`. O registro pode ser avaliação (`nao_castrado`) ou procedimento (`agendada`, `realizada`, `cancelada`), com origem `fluxo` ou `legada`, data/hora planejada opcional, data efetiva opcional com indicador de hora conhecida, data de avaliação, observação, motivo de cancelamento e autor. A migration converte `sim` em procedimento legado realizado sem data, `nao` em avaliação legada “Não castrado” e `nao_informado` em ausência de registro.
+
+**Rationale:** Ausência de informação não deve significar “não castrado”, e dados legados não devem criar cirurgias ou datas fictícias. Tentativas canceladas precisam permanecer no histórico.
+
+**Consequences:** Índices parciais PostgreSQL garantem no máximo um agendamento ativo e no máximo um procedimento realizado por animal. A API de animais expõe rotas de castração para consulta, avaliação “não castrado”, registro realizado legado, agendamento, reagendamento, conclusão e cancelamento; cada mudança grava timeline `castracao` e `AuditoriaEvento` atomicamente. A API de animais expõe `estadoCastracao` derivado com precedência realizada → agendada → não castrado → cancelada → não informado. A criação, edição e listagem de animais não aceitam mais o enum `castrado`; a migração preserva seus valores anteriores em registros históricos. A ficha permite operar o módulo e consultar autoria, datas e observações.

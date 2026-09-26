@@ -33,7 +33,7 @@ Todos os perfis autenticados do CCZ: Coordenação, veterinário, agente e recep
 - Como pessoa da equipe, quero cadastrar um animal rapidamente em etapas claras, para registrar acolhimento sem formulário pesado.
 - Como pessoa da equipe, quero localizar um animal por nome ou número de registro e abrir sua ficha dedicada, para consultar ou corrigir dados.
 - Como pessoa responsável por baias, quero identificar animais sem baia e abrir diretamente a alocação/transferência, para readequá-los.
-- Como veterinário, quero consultar no histórico os eventos clínicos do animal e, em etapas futuras, registrar vacinação e castração em módulos próprios.
+- Como veterinário, quero consultar no histórico os eventos clínicos do animal e acessar os registros de castração do módulo próprio na ficha.
 - Como membro da equipe, quero registrar observações com autoria e data, para compartilhar informação operacional com rastreabilidade.
 - Como Coordenação, quero consultar o histórico completo e auditável de um animal, para reconstruir acolhimento, cuidados, localização e desfecho.
 
@@ -41,12 +41,12 @@ Todos os perfis autenticados do CCZ: Coordenação, veterinário, agente e recep
 
 ### Ficha e identificação
 
-- Campos: nome; número de registro textual; espécie; raça; sexo (`macho`, `fêmea`); porte (`pequeno`, `médio`, `grande`); cor/pelagem; situação; indicador clínico de isolamento (`em isolamento` sim/não); castrado (sim/não); peso atual opcional; data de acolhimento; data de nascimento ou idade estimada; baia opcional; criado por; acolhido por (texto livre); fotos, incluindo uma foto de identificação; observações.
+- Campos: nome; número de registro textual; espécie; raça; sexo (`macho`, `fêmea`); porte (`pequeno`, `médio`, `grande`); cor/pelagem; situação; indicador clínico de isolamento (`em isolamento` sim/não); estado de castração derivado dos registros de castração; peso atual opcional; data de acolhimento; data de nascimento ou idade estimada; baia opcional; criado por; acolhido por (texto livre); fotos, incluindo uma foto de identificação; observações.
 - Número de registro é obrigatório e único, preservando zeros e caracteres do identificador.
 - Espécies iniciais: cão e gato. Raças são valores cadastrados associados a uma espécie. O formulário oferece busca rápida e inclusão rápida de raça da espécie selecionada. A inclusão rápida cria valor reutilizável globalmente, normalizado em Unicode NFC, com `trim`, espaços consecutivos colapsados e comparação case-insensitive para evitar duplicatas; API valida correspondência da espécie. “Outra” permite informar uma raça fora do catálogo e cria uma opção reutilizável para a espécie. “Não Informada” é opção explícita quando raça é desconhecida; “SRD (Sem Raça Definida)” identifica animal sem raça definida. “Outra” e “Não Informada” são opções especiais e não contam como raça livre duplicável.
 - Foto de identificação deve ser uma das fotos da galeria e fica visualmente marcada na ficha e na listagem. Uma foto pode ser definida como identificação por vez.
 - Situações: `em tratamento`, `em quarentena/observação`, `saudável`, `adotado`, `óbito`. O indicador `emIsolamento` é campo clínico separado da situação. Mudanças de situação são eventos do histórico com responsável, data/hora e, opcionalmente, observação/motivo.
-- Sexo pode ser `macho`, `fêmea` ou `não informado`. Quando não informado, criar alerta/pendência visível na seção “Alertas e pendências” da ficha e indicar alerta na listagem. A raça `Não Informada` também gera alerta. Idade estimada sem data de nascimento deve exibir “aprox.” e gerar alerta de dado aproximado. Castrado é sim/não; pode ficar pendente se dado ainda não foi apurado, gerando alerta.
+- Sexo pode ser `macho`, `fêmea` ou `não informado`. Quando não informado, criar alerta/pendência visível na seção “Alertas e pendências” da ficha e indicar alerta na listagem. A raça `Não Informada` também gera alerta. Idade estimada sem data de nascimento deve exibir “aprox.” e gerar alerta de dado aproximado. Castração sem avaliação ou procedimento registrado aparece como “Não informado” e gera alerta; “Não castrado” exige avaliação explícita no módulo de castrações.
 - Data de nascimento conhecida prevalece sobre idade estimada. Quando só idade aproximada for conhecida, guardar estimativa e indicador de aproximação; mostrar “aprox.” e não inventar data exata. Se nascimento ocorrer no CCZ, informar a data. A idade pode ser atualizada pelo sistema para exibição.
 - Data de acolhimento é obrigatória, exceto animal nascido no CCZ: registrar nascimento e acolhimento no mesmo evento/data quando aplicável, sem exigir uma entrada anterior.
 - Criado por vem da sessão autenticada e não é editável. Acolhido por é texto livre; manter também o usuário autenticado que registrou o acolhimento no evento de auditoria.
@@ -81,14 +81,14 @@ Todos os perfis autenticados do CCZ: Coordenação, veterinário, agente e recep
 - Cadastro dividido em etapas focadas: identificação; características e idade; acolhimento/localização; fotos; revisão. Campos obrigatórios aparecem cedo e erros preservam dados já preenchidos.
 - Cada etapa funciona em viewport mobile, com controles de toque adequados, progresso visível, avançar/voltar e salvamento ao concluir. A operação diária deve permitir cadastro mínimo e completar dados depois.
 - Cadastro mínimo recomendado: nome, número de registro, espécie, sexo ou desconhecido, situação, data de acolhimento (ou nascimento no CCZ) e usuário criador. Campos adicionais podem ser completados posteriormente.
-- Listagem padrão exclui situações `adotado` e `óbito`; filtro explícito permite consultá-los. Oferece busca por nome/número e filtros por espécie, situação, sexo, porte, castração, baia/sem baia e alertas. Exibir foto identificadora, nome, registro, espécie/raça, situação, baia e indicador/contador de alertas quando existirem.
+- Listagem padrão exclui situações `adotado` e `óbito`; filtro explícito permite consultá-los. Oferece busca por nome/número e filtros por espécie, situação, sexo, porte, estado de castração derivado, baia/sem baia e alertas. Exibir foto identificadora, nome, registro, espécie/raça, situação, baia, estado de castração e indicador/contador de alertas quando existirem.
 - Selecionar uma linha/card sempre navega para rota dedicada, por exemplo `/painel/animais/[id]`. A rota permite visualizar/editar e mantém o id na URL conforme convenção do projeto. Breadcrumbs levam à lista e a links dos relacionamentos (baia, eventos clínicos e adoção quando existirem).
 - Histórico é acessível diretamente na ficha, em ordem cronológica reversa, com tipo, resumo, data/hora e autor. Ações vinculadas devem abrir seus detalhes.
 
 ### Ações e histórico
 
-- CRUD de vacinação e castração não pertence a esta entrega; ficam como próximos passos em módulos próprios. Histórico do animal deve permitir integrar esses registros depois.
-- Próximo módulo de vacinação deve contemplar nome da vacina, data, próxima dose opcional, lote, dose e aplicador. Próximo módulo de castração deve contemplar fila/agenda, execução e pós-operatório, além da atualização auditável do campo castrado.
+- CRUD de vacinação não pertence a esta entrega e fica como próximo passo em módulo próprio. Castrações são registradas no módulo dedicado e aparecem na ficha do animal com estado derivado, agenda, histórico, observações, cancelamentos e autoria.
+- Próximo módulo de vacinação deve contemplar nome da vacina, data, próxima dose opcional, lote, dose e aplicador.
 - Nesta entrega, ações de exame e diagnóstico podem ser registradas como eventos auditáveis simples com tipo, data/hora, responsável autenticado e descrição/resultado. Eventos não alteram situação automaticamente.
 - Ações operacionais auditadas incluem criação, edição, acolhimento, mudança de situação, alocação/transferência/saída de baia, pesagem, inclusão/remoção de foto, alteração da foto identificadora, evento clínico, observação e adoção/óbito/fuga/retorno quando aplicável.
 - Cada evento é imutável e registra autor, instante, ação, resumo e mudanças relevantes (valores anterior/novo). Correções são novos eventos que referenciam o registro corrigido; não apagar silenciosamente histórico.
@@ -153,7 +153,7 @@ Todos os perfis autenticados do CCZ: Coordenação, veterinário, agente e recep
 
 ## Data and Permissions
 
-- Persistir espécie/raça (raça associada à espécie), animal, foto, baia opcional, pesagens, observações, eventos simples de exame/diagnóstico e histórico no Postgres. Modelos de vacinação, castração e adoção pertencem a próximos módulos.
+- Persistir espécie/raça (raça associada à espécie), animal, foto, baia opcional, pesagens, observações, eventos simples de exame/diagnóstico, histórico e registros de castração no Postgres. Modelos de vacinação e adoção pertencem a próximos módulos.
 - Seed idempotente do catálogo padrão abaixo; opções especiais `Outra` e `Não Informada` também são semeadas para cada espécie. Inclusões personalizadas feitas pela equipe não são removidas por execução posterior do seed.
 - Salvar caminhos absolutos de arquivos gerenciados pelo app, mas tratar diretório-raiz como configuração interna do servidor. Não expor path local em API pública; retornar URL de mídia servida pelo app.
 - Autor de cada operação deriva do usuário autenticado; `criadoPor` não é editável.
@@ -245,7 +245,7 @@ Seed inicial, confirmado pelo autor em 2026-09-24. Raças associadas à espécie
 3. ~~Exclusão física e fotos.~~ Respondida: animal nunca é deletado; foto individual pode ser removida após confirmação.
 4. ~~Limites de fotos.~~ Respondida: máximo 10 por animal, corte quadrado, formatos JPEG/JPG, PNG, WebP; comprimir arquivos acima de 5 MB.
 5. ~~Campos de vacinação.~~ Respondida: além de vacina/data/próxima dose, incluir lote, dose e aplicador; CRUD de vacinação fica para próximos passos.
-6. ~~Escopo de castração.~~ Respondida: módulo de castração fica para próximos passos.
+6. ~~Escopo de castração.~~ Respondida inicialmente como módulo seguinte; já implementado em `.ai-context/specs/gestao-de-castracoes.md` com agenda, histórico e estado derivado.
 7. ~~Adoção.~~ Respondida: módulo fica para próximos passos; estado adotado só após existir fluxo integrado.
 8. ~~Estados terminais.~~ Respondida: adotado/óbito somente leitura; Coordenação pode revogar com motivo auditado; listagem padrão exclui ambos e filtro permite consulta.
 
@@ -255,5 +255,5 @@ Seed inicial, confirmado pelo autor em 2026-09-24. Raças associadas à espécie
 - Implementar alertas para sexo/raça desconhecidos, idade aproximada e ausência de baia.
 - Aplicar política de não exclusão, remoção confirmada de fotos, limite/compressão/corte e bloqueio de edição de estados terminais.
 - Usar catálogo de raças e limites de fotos confirmados nesta spec.
-- Implementar primeiro persistência, validação transacional, eventos auditáveis e upload seguro; depois contrato web, cadastro por etapas, listagem e ficha dedicada. Manter vacinação, castração e adoção no backlog de módulos seguintes, com campos e dependências descritos nesta spec.
+- Implementar primeiro persistência, validação transacional, eventos auditáveis e upload seguro; depois contrato web, cadastro por etapas, listagem e ficha dedicada. Manter vacinação e adoção no backlog de módulos seguintes, com campos e dependências descritos nesta spec.
 - Atualizar arquitetura de baias e glossário durante implementação, não antes: esta entrega é somente especificação.
