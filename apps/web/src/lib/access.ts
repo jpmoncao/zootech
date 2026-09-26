@@ -52,3 +52,11 @@ export function canViewAnimais(perfil: PerfilAcesso): boolean {
 export function canManageAnimais(perfil: PerfilAcesso): boolean {
   return todos.includes(perfil);
 }
+
+export function canViewCastracoes(perfil: PerfilAcesso): boolean {
+  return todos.includes(perfil);
+}
+
+export function canManageCastracoes(perfil: PerfilAcesso): boolean {
+  return todos.includes(perfil);
+}
