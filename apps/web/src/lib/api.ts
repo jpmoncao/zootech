@@ -1,5 +1,3 @@
-import { LucideIcon } from "lucide-react";
-
 export type PerfilAcesso = "coordenacao" | "veterinario" | "agente" | "recepcao";
 
 export type PublicUser = {
@@ -205,6 +203,7 @@ export type Animal = {
   pesagens?: PesagemAnimal[];
   observacoes?: ObservacaoAnimal[];
   eventos?: EventoAnimal[];
+  adocoes?: Adocao[];
 };
 
 export type ListarAnimaisFiltros = {
@@ -292,6 +291,98 @@ export type AlocarAnimalInput = {
 export type RevogarSituacaoAnimalInput = {
   situacao: Extract<SituacaoAnimal, "em_tratamento" | "em_quarentena_observacao" | "saudavel">;
   motivo: string;
+};
+
+export type MidiaTutor = {
+  id: number;
+  tutorId?: number;
+  mimeType: string;
+  tamanhoBytes: number;
+  createdAt: string;
+  url: string;
+};
+
+export type Tutor = {
+  id: number;
+  nome: string;
+  cpf: string;
+  telefone: string;
+  email: string | null;
+  tipoDocumento: string;
+  numeroDocumento: string;
+  cep: string;
+  logradouro: string;
+  numero: string;
+  complemento: string | null;
+  bairro: string;
+  cidade: string;
+  uf: string;
+  criadoPorId: number | null;
+  atualizadoPorId: number | null;
+  createdAt: string;
+  updatedAt: string;
+  foto?: Omit<MidiaTutor, "url"> | null;
+  documentos?: Array<Omit<MidiaTutor, "url">>;
+};
+
+export type CriarTutorInput = Omit<Tutor, "id" | "criadoPorId" | "atualizadoPorId" | "createdAt" | "updatedAt" | "foto" | "documentos" | "email" | "complemento"> & {
+  email?: string;
+  complemento?: string;
+};
+export type AtualizarTutorInput = Partial<CriarTutorInput>;
+
+export type LiberacaoAdocao = {
+  id: number;
+  animalId: number;
+  justificativa: string;
+  autorizadaPorId: number | null;
+  autorizadaEm: string;
+  consumidaEm: string | null;
+  createdAt: string;
+};
+
+export type DevolucaoAdocao = {
+  id: number;
+  adocaoId: number;
+  motivo: string;
+  situacaoRetorno: Extract<SituacaoAnimal, "em_tratamento" | "em_quarentena_observacao" | "saudavel">;
+  baiaId: number | null;
+  recebidaPorId: number | null;
+  recebidaEm: string;
+  createdAt: string;
+  recebidaPor?: Pick<PublicUser, "id" | "nome"> | null;
+  baia?: Pick<Baia, "id" | "codigo"> | null;
+};
+
+export type Adocao = {
+  id: number;
+  animalId: number;
+  tutorId: number;
+  liberacaoId: number | null;
+  consentiuTratamento: boolean;
+  consentiuAcompanhamento: boolean;
+  adotadaPorId: number | null;
+  adotadaEm: string;
+  encerradaEm: string | null;
+  createdAt: string;
+  tutor?: Tutor;
+  adotadaPor?: Pick<PublicUser, "id" | "nome"> | null;
+  liberacao?: LiberacaoAdocao & { autorizadaPor?: Pick<PublicUser, "id" | "nome"> | null };
+  devolucao?: DevolucaoAdocao | null;
+  assinaturaUrl?: string;
+};
+
+export type ConcluirAdocaoInput = {
+  tutorId: number;
+  consentiuTratamento: boolean;
+  consentiuAcompanhamento: boolean;
+  assinatura: File;
+};
+
+export type RegistrarDevolucaoInput = {
+  motivo: string;
+  situacaoRetorno: DevolucaoAdocao["situacaoRetorno"];
+  baiaId?: number | null;
 };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
@@ -573,6 +664,72 @@ export function adicionarFotoAnimal(id: number, foto: File): Promise<FotoAnimal>
     method: "POST",
     body,
   });
+}
+
+export function listarTutores(busca?: string): Promise<Tutor[]> {
+  const query = busca?.trim() ? `?busca=${encodeURIComponent(busca.trim())}` : "";
+  return request<Tutor[]>(`/tutores${query}`, { method: "GET" });
+}
+
+export function obterTutor(id: number): Promise<Tutor> {
+  return request<Tutor>(`/tutores/${id}`, { method: "GET" });
+}
+
+export function buscarTutorPorCpf(cpf: string): Promise<Tutor> {
+  return request<Tutor>(`/tutores/cpf/${encodeURIComponent(cpf)}`, { method: "GET" });
+}
+
+export function criarTutor(input: CriarTutorInput): Promise<Tutor> {
+  return request<Tutor>("/tutores", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function atualizarTutor(id: number, input: AtualizarTutorInput): Promise<Tutor> {
+  return request<Tutor>(`/tutores/${id}`, { method: "PATCH", body: JSON.stringify(input) });
+}
+
+export function adicionarFotoTutor(id: number, arquivo: File): Promise<MidiaTutor> {
+  return adicionarMidiaTutor(id, "foto", arquivo);
+}
+
+export function adicionarDocumentoTutor(id: number, arquivo: File): Promise<MidiaTutor> {
+  return adicionarMidiaTutor(id, "documentos", arquivo);
+}
+
+function adicionarMidiaTutor(id: number, tipo: "foto" | "documentos", arquivo: File): Promise<MidiaTutor> {
+  const body = new FormData();
+  body.set("arquivo", arquivo);
+  return request<MidiaTutor>(`/tutores/${id}/midia/${tipo}`, { method: "POST", body });
+}
+
+export async function carregarMidiaTutor(midia: Pick<MidiaTutor, "url">): Promise<Blob> {
+  return requestBlob(midia.url);
+}
+
+export function liberarAnimalParaAdocao(animalId: number, justificativa: string): Promise<LiberacaoAdocao> {
+  return request<LiberacaoAdocao>(`/animais/${animalId}/adocoes/liberacao`, {
+    method: "POST",
+    body: JSON.stringify({ justificativa }),
+  });
+}
+
+export function concluirAdocao(animalId: number, input: ConcluirAdocaoInput): Promise<Adocao> {
+  const body = new FormData();
+  body.set("tutorId", String(input.tutorId));
+  body.set("consentiuTratamento", String(input.consentiuTratamento));
+  body.set("consentiuAcompanhamento", String(input.consentiuAcompanhamento));
+  body.set("assinatura", input.assinatura, input.assinatura.name || "assinatura.png");
+  return request<Adocao>(`/animais/${animalId}/adocoes`, { method: "POST", body });
+}
+
+export function registrarDevolucao(animalId: number, input: RegistrarDevolucaoInput): Promise<DevolucaoAdocao> {
+  return request<DevolucaoAdocao>(`/animais/${animalId}/adocoes/devolucao`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function carregarAssinaturaAdocao(animalId: number, adocaoId: number): Promise<Blob> {
+  return requestBlob(`/animais/${animalId}/adocoes/assinatura/${adocaoId}`);
 }
 
 export function removerFotoAnimal(id: number, fotoId: number): Promise<{ ok: true }> {

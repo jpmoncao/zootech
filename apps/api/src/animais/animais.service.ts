@@ -61,6 +61,15 @@ const DETAIL_INCLUDE = {
     include: { usuario: { select: { id: true, nome: true } } },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
   },
+  adocoes: {
+    include: {
+      tutor: true,
+      adotadaPor: { select: { id: true, nome: true } },
+      liberacao: { include: { autorizadaPor: { select: { id: true, nome: true } } } },
+      devolucao: { include: { recebidaPor: { select: { id: true, nome: true } }, baia: { select: { id: true, codigo: true } } } },
+    },
+    orderBy: [{ adotadaEm: "desc" }, { id: "desc" }],
+  },
 } satisfies Prisma.AnimalInclude;
 
 type AnimalListEntity = Prisma.AnimalGetPayload<{ include: typeof LIST_INCLUDE }>;
@@ -196,6 +205,7 @@ export class AnimaisService {
   async atualizar(id: number, dto: UpdateAnimalDto, ator: AuthUser) {
     try {
       const animal = await this.prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM "animais" WHERE id = ${id} FOR UPDATE`;
         const atual = await tx.animal.findUnique({ where: { id }, include: DETAIL_INCLUDE });
         if (!atual) throw new NotFoundException("Animal não encontrado.");
         this.assertEditable(atual);
@@ -271,6 +281,7 @@ export class AnimaisService {
       throw new BadRequestException("Informe a baia de destino ou null para retirar o animal da baia.");
     }
     return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "animais" WHERE id = ${id} FOR UPDATE`;
       const atual = await tx.animal.findUnique({ where: { id }, include: DETAIL_INCLUDE });
       if (!atual) throw new NotFoundException("Animal não encontrado.");
       this.assertEditable(atual);
@@ -411,9 +422,13 @@ export class AnimaisService {
       throw new ForbiddenException("Somente a coordenação pode revogar situação terminal.");
     }
     return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "animais" WHERE id = ${id} FOR UPDATE`;
       const atual = await tx.animal.findUnique({ where: { id }, include: DETAIL_INCLUDE });
       if (!atual) throw new NotFoundException("Animal não encontrado.");
       if (!TERMINAIS.includes(atual.situacao)) throw new ConflictException("Animal não está em situação terminal.");
+      if (atual.situacao === "adotado") {
+        throw new ConflictException("A adoção não pode ser revogada. Registre uma devolução para reabrir o ciclo do animal.");
+      }
       const atualizado = await tx.animal.update({ where: { id }, data: { situacao: dto.situacao }, include: DETAIL_INCLUDE });
       await this.createEvento(tx, id, "revogacao_situacao_terminal", `Situação terminal ${atual.situacao} revogada.`, ator.id, {
         situacaoAnterior: atual.situacao,
@@ -674,6 +689,10 @@ export class AnimaisService {
         pesagens: animal.pesagens.map((pesagem) => this.viewPesagem(pesagem)),
         observacoes: animal.observacoes.map((observacao) => this.viewObservacao(observacao)),
         eventos: animal.eventos.map((evento) => this.viewEvento(evento)),
+        adocoes: animal.adocoes.map(({ caminhoAssinatura: _caminhoAssinatura, nomeArquivoAssinatura: _nomeArquivoAssinatura, mimeTypeAssinatura: _mimeTypeAssinatura, tamanhoAssinatura: _tamanhoAssinatura, ...adocao }) => ({
+          ...adocao,
+          assinaturaUrl: `/animais/${animal.id}/adocoes/assinatura/${adocao.id}`,
+        })),
       };
     }
     return base;

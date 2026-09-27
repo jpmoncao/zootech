@@ -22,10 +22,8 @@ import {
   Loader2,
   LucideIcon,
   MapPin,
-  MapPinIcon,
   MapPinPenIcon,
   MessageCircleIcon,
-  PencilIcon,
   Plus,
   PlusCircleIcon,
   RefreshCw,
@@ -42,6 +40,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ControlSelect } from "@/components/control-select";
 import { AnimalPhoto } from "@/components/animal-photo";
 import { PhotoPicker } from "@/components/photo-picker";
+import { AdocaoPanel } from "@/components/adocao-panel";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -298,6 +297,7 @@ function FichaAnimal() {
           baias={baias}
           podeEditar={podeEditar && !animal.somenteLeitura}
           podeRevogar={podeRevogar}
+          podeLiberar={perfil === "coordenacao" || perfil === "veterinario"}
           onChanged={reloadAfterChange}
           onDirtyChange={setDirty}
         />
@@ -320,6 +320,7 @@ function Ficha({
   baias,
   podeEditar,
   podeRevogar,
+  podeLiberar,
   onChanged,
   onDirtyChange,
 }: {
@@ -327,6 +328,7 @@ function Ficha({
   baias: Baia[];
   podeEditar: boolean;
   podeRevogar: boolean;
+  podeLiberar: boolean;
   onChanged: () => Promise<void>;
   onDirtyChange: (dirty: boolean) => void;
 }) {
@@ -358,7 +360,7 @@ function Ficha({
         {animal.somenteLeitura ? (
           <Alert>
             <AlertDescription>
-              Animal em estado terminal. A ficha está bloqueada para mutações e permanece disponível para consulta.
+              {animal.situacao === "adotado" ? "A ficha permanece somente para consulta. Para receber o animal de volta, registre a devolução na seção Adoção." : "Animal em óbito. A ficha permanece somente para consulta; a Coordenação pode revogar esse estado com motivo."}
             </AlertDescription>
           </Alert>
         ) : null}
@@ -368,6 +370,11 @@ function Ficha({
           <QuickFact icon={<AlertTriangle aria-hidden="true" />} label="Pendências" value={String(animal.alertas.length)} tone={animal.alertas.length > 0 ? "warn" : "ok"} />
           <QuickFact icon={<CalendarDays aria-hidden="true" />} label="Acolhimento" value={animal.dataAcolhimento ? formatDateOnly(animal.dataAcolhimento) : "Não informado"} tone="muted" />
         </div>
+      </section>
+
+      <section className="col-span-full flex min-w-0 flex-col gap-4 rounded-[10px] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow)]" aria-label="Adoção">
+        <SectionHeader icon={<ClipboardCheckIcon aria-hidden="true" />} title="Adoção" note="Formalização e consulta da guarda" />
+        <AdocaoPanel animal={animal} baias={baias} podeLiberar={podeLiberar} onChanged={onChanged} />
       </section>
 
       <section className="[background:var(--surface)] [border:1px_solid_var(--line)] [border-radius:10px] [padding:20px] [display:flex] [flex-direction:column] [gap:16px] [box-shadow:var(--shadow)] [grid-column:2] [grid-row:span_2] [position:sticky] [top:16px] [&_h2]:[margin-top:0] max-[760px]:[grid-column:auto] max-[760px]:[position:static] max-[760px]:[grid-row:auto]" aria-label="Alertas e pendências">
@@ -412,7 +419,7 @@ function Ficha({
         <Acompanhamento animal={animal} disabled={!podeEditar} onChanged={onChanged} />
       </section>
 
-      {animal.somenteLeitura && podeRevogar ? (
+      {animal.situacao === "obito" && podeRevogar ? (
         <section className="[background:var(--surface)] [border:1px_solid_var(--line)] [border-radius:10px] [padding:20px] [display:flex] [flex-direction:column] [gap:16px] [box-shadow:var(--shadow)] [grid-column:1] max-[760px]:[grid-column:auto] [grid-column:1_/_-1] max-[760px]:[grid-column:auto]" aria-label="Revogação de estado terminal">
           <SectionHeader icon={<RotateCcw aria-hidden="true" />} title="Revogar estado terminal" note="Apenas Coordenação, com motivo obrigatório." />
           <RevogarTerminal animal={animal} onChanged={onChanged} />

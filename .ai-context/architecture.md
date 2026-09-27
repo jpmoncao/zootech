@@ -66,7 +66,7 @@ Relações vigentes:
 - Um `Animal` possui exatamente um `Prontuario`.
 - Um `Prontuario` contém zero ou mais `RegistroVacina`.
 - Um `Animal` tem zero ou uma `Castracao`.
-- Um `Animal` tem zero ou uma `Adocao`. A adoção é o momento em que o animal recebe o tutor.
+- Um `Animal` tem zero ou mais adoções ao longo do tempo, mas no máximo uma ativa. A adoção vincula tutor e torna a situação `adotado`; a devolução encerra o vínculo de guarda atual, preserva o registro anterior e permite outra adoção. Este é o modelo de produto especificado para implementação; o diagrama legado abaixo ainda mostra a cardinalidade antiga `0..1`.
 - Um `Funcionario` atende zero ou mais `Prontuario`.
 
 ```mermaid

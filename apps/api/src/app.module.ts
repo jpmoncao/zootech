@@ -6,6 +6,8 @@ import { BaiasModule } from "./baias/baias.module";
 import { HealthController } from "./health.controller";
 import { PrismaModule } from "./prisma/prisma.module";
 import { UsersModule } from "./users/users.module";
+import { TutoresModule } from "./tutores/tutores.module";
+import { AdocoesModule } from "./adocoes/adocoes.module";
 
 @Module({
   imports: [
@@ -15,6 +17,8 @@ import { UsersModule } from "./users/users.module";
     UsersModule,
     BaiasModule,
     AnimaisModule,
+    TutoresModule,
+    AdocoesModule,
   ],
   controllers: [HealthController],
 })

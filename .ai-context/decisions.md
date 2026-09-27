@@ -258,3 +258,11 @@
 **Rationale:** Caminho relativo sobrevive a mudanças de diretório de execução. Recusar foto não quadrada preserva o recorte escolhido pelo usuário.
 
 **Consequences:** Clientes da API que enviarem imagem retangular recebem 400. A URL pública continua sendo a rota autenticada `/animais/:id/fotos/:fotoId/arquivo`.
+
+# 2026-09-26 — Situação `adotado` vinculada ao registro de adoção
+
+**Context:** A situação `adotado` já existe no cadastro de animais, mas o módulo de tutores e adoção ainda não existe. O CCZ precisa identificar a pessoa física que leva o animal e registrar seu aceite dos termos.
+
+**Decision:** `adotado` sai da opção manual de situação. A ficha do animal inicia o registro de adoção; somente sua conclusão com tutor cadastrado, dois switches de ciência/concordância ativados e assinatura desenhada pelo tutor com mouse ou toque altera a situação para `adotado`. O funcionário comunica os termos ao tutor fora do sistema; o sistema não cadastra, exibe nem versiona seu texto, apenas registra as declarações e a assinatura. O tutor informa dados pessoais, endereço e documento de identificação; foto pessoal e até três fotos da documentação são opcionais. Fotos documentais ficam guardadas sem prazo de expiração. Animal saudável é elegível; outros estados operacionais exigem liberação expressa por veterinário ou Coordenação. Todos os perfis autenticados do CCZ podem cadastrar e consultar tutores, concluir adoções e registrar devoluções. Adoção confirmada não pode ser revogada; para retornar o animal ao CCZ e permitir outra adoção, é obrigatório registrar devolução. A conclusão mostra aviso explícito dessa regra.
+
+**Consequences:** Cadastro/edição genéricos de animais e API devem impedir a transição manual e a revogação genérica de `adotado`. Adoção e devolução precisam atualizar vínculo de guarda, situação, baia e auditoria de forma atômica. O animal pode ter várias adoções históricas, mas apenas uma ativa. Registros antigos `adotado` sem adoção precisam de tratamento antes de impor a nova regra. O registro comprova a declaração de ciência/concordância feita no sistema, sem identificar qual texto foi comunicado pelo funcionário.

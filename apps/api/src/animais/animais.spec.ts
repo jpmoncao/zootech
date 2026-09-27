@@ -360,6 +360,52 @@ describe("animais", () => {
     expect(auditoria).not.toBeNull();
   });
 
+  it("bloqueia revogação manual da adoção e expõe os ciclos sem conteúdo de assinatura", async () => {
+    const token = tokens.get("coordenacao")!;
+    const animal = await criarAnimal(token, { nome: `Adoção ${STAMP}` });
+    const tutor = await prisma.tutor.create({
+      data: {
+        nome: `Tutor ${STAMP}`, cpf: `1234567${STAMP.slice(-4)}`, telefone: "11999999999",
+        tipoDocumento: "RG", numeroDocumento: `RG-${STAMP}`, cep: "01001000", logradouro: "Rua A",
+        numero: "10", bairro: "Centro", cidade: "São Paulo", uf: "SP",
+      },
+    });
+    const assinatura = await imagemAssinaturaTeste();
+
+    const resposta = await request(app.getHttpServer())
+      .post(`/animais/${animal.id}/adocoes`)
+      .set(auth(token))
+      .field("tutorId", String(tutor.id))
+      .field("consentiuTratamento", "true")
+      .field("consentiuAcompanhamento", "true")
+      .attach("assinatura", assinatura, { filename: "assinatura.png", contentType: "image/png" })
+      .expect(201);
+
+    const detalhe = await request(app.getHttpServer())
+      .get(`/animais/${animal.id}`)
+      .set(auth(token))
+      .expect(200);
+
+    expect(detalhe.body.situacao).toBe("adotado");
+    expect(detalhe.body.adocoes).toHaveLength(1);
+    expect(detalhe.body.adocoes[0]).toMatchObject({
+      id: resposta.body.id,
+      tutor: { id: tutor.id },
+      consentiuTratamento: true,
+      consentiuAcompanhamento: true,
+      assinaturaUrl: `/animais/${animal.id}/adocoes/assinatura/${resposta.body.id}`,
+      devolucao: null,
+    });
+    expect(JSON.stringify(detalhe.body)).not.toContain("caminhoAssinatura");
+    expect(JSON.stringify(detalhe.body)).not.toContain("tamanhoAssinatura");
+
+    await request(app.getHttpServer())
+      .post(`/animais/${animal.id}/revogar-situacao`)
+      .set(auth(token))
+      .send({ situacao: "saudavel", motivo: "Correção" })
+      .expect(409);
+  });
+
   it("aloca, transfere e retira animal atualizando ocupantes reais das baias", async () => {
     const token = tokens.get("coordenacao")!;
     const animal = await criarAnimal(token);
@@ -706,6 +752,28 @@ async function imagemTeste(format: "jpeg" | "png" | "webp", width: number, heigh
   if (format === "jpeg") return image.jpeg({ quality: 92 }).toBuffer();
   if (format === "png") return image.png().toBuffer();
   return image.webp({ quality: 90 }).toBuffer();
+}
+
+async function imagemAssinaturaTeste() {
+  const { data, info } = await sharp({
+    create: { width: 256, height: 128, channels: 3, background: "white" },
+  }).raw().toBuffer({ resolveWithObject: true });
+  for (let x = 20; x < 220; x += 1) {
+    const y = Math.round(76 - 42 * Math.sin((x - 20) / 18) - 18 * Math.sin((x - 20) / 5));
+    for (let dy = -2; dy <= 2; dy += 1) {
+      for (let dx = -2; dx <= 2; dx += 1) {
+        const px = x + dx;
+        const py = y + dy;
+        if (px >= 0 && px < info.width && py >= 0 && py < info.height) {
+          const offset = (py * info.width + px) * info.channels;
+          data[offset] = 0;
+          data[offset + 1] = 0;
+          data[offset + 2] = 0;
+        }
+      }
+    }
+  }
+  return sharp(data, { raw: info }).png().toBuffer();
 }
 
 async function imagemGrandePng() {
