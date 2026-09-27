@@ -276,6 +276,15 @@ describe("baias authorization", () => {
     expect(detalhe.body.ocupacao).toBe(2);
     expect(detalhe.body.vagasDisponiveis).toBe(0);
     expect(detalhe.body.ocupantes.map((ocupante: { id: number }) => ocupante.id)).toContain(animal.id);
+    const ocupante = detalhe.body.ocupantes.find((item: { id: number }) => item.id === animal.id);
+    expect(ocupante).toMatchObject({
+      nome: animal.nome,
+      numeroRegistro: animal.numeroRegistro,
+      especie: "cao",
+      sexo: "nao_informado",
+      estadoCastracao: "nao_informado",
+      alertas: expect.arrayContaining([expect.objectContaining({ tipo: "sexo_nao_informado" })]),
+    });
 
     await request(app.getHttpServer())
       .patch(`/baias/${baia.id}`)
@@ -304,6 +313,58 @@ describe("baias authorization", () => {
       .set(auth(token))
       .send({})
       .expect(409);
+  });
+
+  it("inclui entradas, transferências, saídas, adoção e devolução no histórico da baia", async () => {
+    const token = tokens.get("coordenacao")!;
+    const origem = await criarBaiaComoCoordenacao();
+    const destino = await criarBaiaComoCoordenacao();
+    seq += 1;
+    const animal = await prisma.animal.create({ data: {
+      nome: `Histórico ${STAMP}`,
+      numeroRegistro: `BAIAS-${STAMP}-${seq}`,
+      numeroRegistroNormalizado: `baias-${STAMP}-${seq}`,
+      especie: "cao",
+    } });
+
+    for (const [baiaId, observacao] of [[origem.id, "Entrada inicial"], [destino.id, "Mudança de setor"], [null, "Retirada para atendimento"]] as const) {
+      await request(app.getHttpServer())
+        .post(`/animais/${animal.id}/alocacao`)
+        .set(auth(token))
+        .send({ baiaId, observacao })
+        .expect(201);
+    }
+
+    const historicoOrigem = await request(app.getHttpServer())
+      .get(`/baias/${origem.id}/historico`)
+      .set(auth(token))
+      .expect(200);
+    const movimentosOrigem = historicoOrigem.body.filter((evento: { movimentacao?: unknown }) => evento.movimentacao);
+    expect(movimentosOrigem).toHaveLength(2);
+    expect(movimentosOrigem).toEqual(expect.arrayContaining([
+      expect.objectContaining({ movimentacao: expect.objectContaining({ direcao: "entrada", animal: expect.objectContaining({ id: animal.id, nome: animal.nome, numeroRegistro: animal.numeroRegistro }), observacao: "Entrada inicial" }) }),
+      expect.objectContaining({ movimentacao: expect.objectContaining({ direcao: "saida", baiaRelacionada: expect.objectContaining({ id: destino.id }), observacao: "Mudança de setor" }) }),
+    ]));
+
+    const historicoDestino = await request(app.getHttpServer())
+      .get(`/baias/${destino.id}/historico`)
+      .set(auth(token))
+      .expect(200);
+    expect(historicoDestino.body).toEqual(expect.arrayContaining([
+      expect.objectContaining({ movimentacao: expect.objectContaining({ direcao: "entrada", baiaRelacionada: expect.objectContaining({ id: origem.id }) }) }),
+      expect.objectContaining({ movimentacao: expect.objectContaining({ direcao: "saida", baiaRelacionada: null, observacao: "Retirada para atendimento" }) }),
+    ]));
+
+    await prisma.auditoriaEvento.createMany({ data: [
+      { tipo: "animal_adocao_concluida", usuarioId: usuarios.get("coordenacao")!.id, dados: { entidade: "animal", entidadeId: String(animal.id), baiaAnteriorId: origem.id } },
+      { tipo: "animal_devolucao_registrada", usuarioId: usuarios.get("coordenacao")!.id, dados: { entidade: "animal", entidadeId: String(animal.id), baiaDestinoId: destino.id, motivo: "Retorno ao CCZ" } },
+    ] });
+    const [historicoAdocao, historicoDevolucao] = await Promise.all([
+      request(app.getHttpServer()).get(`/baias/${origem.id}/historico`).set(auth(token)).expect(200),
+      request(app.getHttpServer()).get(`/baias/${destino.id}/historico`).set(auth(token)).expect(200),
+    ]);
+    expect(historicoAdocao.body).toEqual(expect.arrayContaining([expect.objectContaining({ tipo: "animal_adocao_concluida", movimentacao: expect.objectContaining({ direcao: "saida" }) })]));
+    expect(historicoDevolucao.body).toEqual(expect.arrayContaining([expect.objectContaining({ tipo: "animal_devolucao_registrada", movimentacao: expect.objectContaining({ direcao: "entrada", observacao: "Retorno ao CCZ" }) })]));
   });
 
   it("nega CRUD, ações operacionais e auditoria para perfis sem coordenação", async () => {

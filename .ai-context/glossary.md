@@ -37,7 +37,7 @@ Pessoa do CCZ representada por `Funcionario` (`matricula`, `cargo`, `crmv`), her
 
 ### Tutor
 
-Responsável pelo animal depois da adoção. Herda de `Usuario` e tem endereço, bairro e quantidade de animais. O diagrama também dá a `Tutor` um `idTutor` próprio. O animal entra no CCZ sem tutor.
+Pessoa física responsável pelo animal durante uma adoção ativa. Informa dados pessoais, endereço e documento; foto pessoal e até três fotos documentais são opcionais. O diagrama original o faz herdar de `Usuario`, mas o cadastro de tutor desta spec não pressupõe login nem perfil de acesso. O animal entra no CCZ sem tutor e perde o vínculo de guarda atual quando uma devolução é registrada.
 
 ### Animal
 
@@ -77,7 +77,11 @@ Avaliação ou tentativa de procedimento de um animal. No banco, `CastracaoAnima
 
 ### Adoção
 
-Registro de adoção de um animal, com termo assinado e status de acompanhamento. Zero ou um por animal no diagrama. É neste momento que o animal recebe o tutor.
+Registro imutável da entrega de um animal a um tutor. O funcionário comunica os termos fora do sistema; a confirmação registra dois switches de ciência/concordância e assinatura desenhada com mouse ou toque, sem texto ou versão dos termos. Torna o animal `adotado` e libera sua baia. Um animal pode ter várias adoções históricas, mas apenas uma ativa; nova adoção exige devolução da anterior. Adoção confirmada não pode ser revogada.
+
+### Devolução
+
+Movimentação que registra o retorno de animal adotado ao CCZ, preserva a adoção, as declarações e a assinatura anteriores, encerra o vínculo de guarda atual e devolve o animal a uma situação operacional. É pré-requisito para uma nova adoção do mesmo animal.
 
 ### Acolhimento
 

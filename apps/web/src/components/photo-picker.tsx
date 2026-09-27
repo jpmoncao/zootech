@@ -80,13 +80,13 @@ export function PhotoPicker({
 
   return (
     <>
-      <div className="[border:1px_dashed_#a9cbc7] [border-radius:8px] [background:var(--primary-50)] [padding:14px] [display:grid] [grid-template-columns:34px_minmax(0,_1fr)_auto] [gap:12px] [align-items:center] [&>svg]:[color:var(--primary)] [&>svg]:[width:26px] [&>svg]:[height:26px]">
-        <ImagePlus aria-hidden="true" />
-        <div>
-          <p className="[margin:0] [font-weight:700]">{label}</p>
-          <p className="[font-size:13px] [color:var(--muted)] [overflow-wrap:anywhere]">{hint}</p>
+      <div className="flex flex-wrap items-center gap-3 rounded-[8px] border border-dashed border-[#a9cbc7] bg-[var(--primary-50)] p-3.5">
+        <ImagePlus aria-hidden="true" className="size-[26px] shrink-0 text-primary" />
+        <div className="min-w-48 flex-1">
+          <p className="font-bold">{label}</p>
+          <p className="text-[13px] text-pretty text-[var(--muted)]">{hint}</p>
         </div>
-        <Button type="button" variant="outline" disabled={disabled || remaining <= 0} onClick={openPicker}>
+        <Button type="button" variant="outline" className="shrink-0" disabled={disabled || remaining <= 0} onClick={openPicker}>
           Adicionar fotos
         </Button>
         <input

@@ -8,6 +8,7 @@ const timelineTone: Record<TomEventoAnimal, string> = {
   info: "border-line border-l-info bg-info-50",
   crit: "border-line border-l-crit bg-crit-50",
   muted: "border-line border-l-muted-foreground bg-background",
+  violet: "border-line border-l-violet bg-violet-50",
 };
 
 const timelineIconTone: Record<TomEventoAnimal, string> = {
@@ -15,6 +16,7 @@ const timelineIconTone: Record<TomEventoAnimal, string> = {
   info: "bg-info text-white",
   crit: "bg-crit text-white",
   muted: "bg-muted-foreground text-white",
+  violet: "bg-violet text-white",
 };
 
 const formatDate = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });

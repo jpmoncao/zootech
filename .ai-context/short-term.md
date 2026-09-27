@@ -6,6 +6,8 @@ Autenticação JWT concluída (tarefas 1–10). Gestão de baias concluída no e
 
 ## Active Tasks
 
+- Gestão de tutores e adoção: spec/plano e tasks em `.ai-context/{specs,plans,tasks}/gestao-de-adocao.md`. Tasks 2–10 implementadas; API cobre CRUD/mídia de tutor, liberação excepcional de uso único, adoção/devolução transacionais e histórico do ciclo. A ficha oferece cadastro de tutor, adoção, devolução com motivo/situação/baia opcional e ciclos anteriores. Próximo passo: task 11 (validação integrada e contexto durável). Testes integrados e jornada manual aguardam recuperação segura das migrations locais. Fotos tutor são WebP até 5 MB; até três documentos; sem remoção/expiração. Assinatura fica vinculada apenas à adoção definitiva.
+
 - Gestão de animais: spec `.ai-context/specs/gestao-de-animais.md`, plano `.ai-context/plans/gestao-de-animais.md`, tarefas `.ai-context/tasks/gestao-de-animais.md`.
   - Status: tasks 1, 2, 3, 4, 5, 6, 7, 8 e 9 concluídas; ajustes de interface antes da task 10 concluídos; task 10 é o próximo passo.
   - Notes: cadastro/edição em `Dialog` largo com etapas; raça em combobox (`Não informada`, SRD, catálogo, `Outra`); fotos com botão “Adicionar fotos”, crop quadrado no cliente (`react-easy-crop`) e `AlertDialog` para remoção. `FotoAnimal.caminhoAbsoluto` é relativo (`animais/{id}/{uuid}.webp`) e a API ancora `storage/media` em `apps/api`. Lista mostra só a quantidade de alertas, com descrição no `Tooltip`. Ficha tem baia/localização lado a lado, peso em destaque, rascunho com confirmação ao sair e histórico no padrão `history-list`. Filtros de animais e baias usam `Select`; baia filtra pelo código. Migration `20260924220000_foto_caminho_relativo` converte paths absolutos antigos.
@@ -132,7 +134,8 @@ Autenticação JWT concluída (tarefas 1–10). Gestão de baias concluída no e
 ## Next Steps
 
 1. Implementar task 10 de gestão de animais: validação integrada, ajustes finais e atualização de contexto durável.
-2. Especificar demais funcionalidades do painel ADM (UC02–UC10 e auditoria) que ainda não têm spec.
+2. Recuperar/alinha migrations de adoção, executar a jornada integrada de adoção → devolução → nova adoção e concluir a task 11 de adoção.
+3. Especificar demais funcionalidades do painel ADM que ainda não têm spec.
 
 ## Things To Remember
 

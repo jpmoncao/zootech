@@ -40,6 +40,7 @@ import { ListAnimaisDto } from "./dto/list-animais.dto";
 import { ListCastracoesDto } from "./dto/list-castracoes.dto";
 import { RevogarSituacaoDto } from "./dto/revogar-situacao.dto";
 import { UpdateAnimalDto } from "./dto/update-animal.dto";
+import { estadoCastracaoAnimal } from "./estado-castracao";
 
 const TERMINAIS: SituacaoAnimal[] = ["adotado", "obito"];
 const FOTO_MAX_BYTES = 5 * 1024 * 1024;
@@ -68,6 +69,15 @@ const DETAIL_INCLUDE = {
   eventos: {
     include: { usuario: { select: { id: true, nome: true } } },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+  },
+  adocoes: {
+    include: {
+      tutor: true,
+      adotadaPor: { select: { id: true, nome: true } },
+      liberacao: { include: { autorizadaPor: { select: { id: true, nome: true } } } },
+      devolucao: { include: { recebidaPor: { select: { id: true, nome: true } }, baia: { select: { id: true, codigo: true } } } },
+    },
+    orderBy: [{ adotadaEm: "desc" }, { id: "desc" }],
   },
 } satisfies Prisma.AnimalInclude;
 
@@ -207,6 +217,7 @@ export class AnimaisService {
   async atualizar(id: number, dto: UpdateAnimalDto, ator: AuthUser) {
     try {
       const animal = await this.prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM "animais" WHERE id = ${id} FOR UPDATE`;
         const atual = await tx.animal.findUnique({ where: { id }, include: DETAIL_INCLUDE });
         if (!atual) throw new NotFoundException("Animal não encontrado.");
         this.assertEditable(atual);
@@ -282,6 +293,7 @@ export class AnimaisService {
       throw new BadRequestException("Informe a baia de destino ou null para retirar o animal da baia.");
     }
     return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "animais" WHERE id = ${id} FOR UPDATE`;
       const atual = await tx.animal.findUnique({ where: { id }, include: DETAIL_INCLUDE });
       if (!atual) throw new NotFoundException("Animal não encontrado.");
       this.assertEditable(atual);
@@ -631,9 +643,13 @@ export class AnimaisService {
       throw new ForbiddenException("Somente a coordenação pode revogar situação terminal.");
     }
     return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "animais" WHERE id = ${id} FOR UPDATE`;
       const atual = await tx.animal.findUnique({ where: { id }, include: DETAIL_INCLUDE });
       if (!atual) throw new NotFoundException("Animal não encontrado.");
       if (!TERMINAIS.includes(atual.situacao)) throw new ConflictException("Animal não está em situação terminal.");
+      if (atual.situacao === "adotado") {
+        throw new ConflictException("A adoção não pode ser revogada. Registre uma devolução para reabrir o ciclo do animal.");
+      }
       const atualizado = await tx.animal.update({ where: { id }, data: { situacao: dto.situacao }, include: DETAIL_INCLUDE });
       await this.createEvento(tx, id, "revogacao_situacao_terminal", `Situação terminal ${atual.situacao} revogada.`, ator.id, {
         situacaoAnterior: atual.situacao,
@@ -831,11 +847,7 @@ export class AnimaisService {
   }
 
   private estadoCastracao(castracoes: CastracaoAnimal[]): "agendada" | "realizada" | "nao_castrado" | "cancelada" | "nao_informado" {
-    if (castracoes.some((item) => item.tipo === "procedimento" && item.estado === "realizada")) return "realizada";
-    if (castracoes.some((item) => item.tipo === "procedimento" && item.estado === "agendada")) return "agendada";
-    if (castracoes.some((item) => item.tipo === "avaliacao" && item.estado === "nao_castrado")) return "nao_castrado";
-    if (castracoes.some((item) => item.estado === "cancelada")) return "cancelada";
-    return "nao_informado";
+    return estadoCastracaoAnimal(castracoes);
   }
 
   private requiredText(value: string, message: string) {
@@ -878,7 +890,7 @@ export class AnimaisService {
 
   private alertas(animal: AnimalListEntity | AnimalDetailEntity) {
     const alertas: { tipo: string; mensagem: string }[] = [];
-    if (!animal.baiaId) alertas.push({ tipo: "sem_baia", mensagem: "Animal sem baia alocada." });
+    if (!animal.baiaId && !TERMINAIS.includes(animal.situacao)) alertas.push({ tipo: "sem_baia", mensagem: "Animal sem baia alocada." });
     if (animal.sexo === "nao_informado") alertas.push({ tipo: "sexo_nao_informado", mensagem: "Sexo não informado." });
     if (!animal.raca || animal.raca.tipo === "nao_informada") alertas.push({ tipo: "raca_nao_informada", mensagem: "Raça não informada." });
     if (animal.idadeAproximada) alertas.push({ tipo: "idade_aproximada", mensagem: "Idade aproximada." });
@@ -901,6 +913,10 @@ export class AnimaisService {
         pesagens: animal.pesagens.map((pesagem) => this.viewPesagem(pesagem)),
         observacoes: animal.observacoes.map((observacao) => this.viewObservacao(observacao)),
         eventos: animal.eventos.map((evento) => this.viewEvento(evento)),
+        adocoes: animal.adocoes.map(({ caminhoAssinatura: _caminhoAssinatura, nomeArquivoAssinatura: _nomeArquivoAssinatura, mimeTypeAssinatura: _mimeTypeAssinatura, tamanhoAssinatura: _tamanhoAssinatura, ...adocao }) => ({
+          ...adocao,
+          assinaturaUrl: `/animais/${animal.id}/adocoes/assinatura/${adocao.id}`,
+        })),
       };
     }
     return base;

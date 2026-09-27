@@ -22,6 +22,8 @@
   --warn-50: #fcefd9;
   --crit: #b93a2b;
   --crit-50: #fbe6e3;
+  --violet: #6d28d9;
+  --violet-50: #f3e8ff;
   --info: #2e6aa3;
   --info-50: #e3edf7;
   --on-dark: #e3f0ef;
@@ -159,10 +161,10 @@ p {
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
-  --color-accent-foreground: #0c4549;
-  --color-accent: #e3f0ef;
-  --color-muted-foreground: #5b6b68;
-  --color-muted: #e3f0ef;
+  --color-accent-foreground: var(--primary-700);
+  --color-accent: var(--primary-50);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
@@ -182,6 +184,8 @@ p {
   --color-warn-50: var(--warn-50);
   --color-crit: var(--crit);
   --color-crit-50: var(--crit-50);
+  --color-violet: var(--violet);
+  --color-violet-50: var(--violet-50);
   --color-info: var(--info);
   --color-info-50: var(--info-50);
   --radius-sm: calc(var(--radius) * 0.6);
