@@ -72,16 +72,27 @@ enum SituacaoAnimal {
   obito
 }
 
-enum StatusCastracaoAnimal {
-  sim
-  nao
-  nao_informado
-}
-
 enum UnidadeIdadeAnimal {
   dias
   meses
   anos
+}
+
+enum TipoCastracaoAnimal {
+  avaliacao
+  procedimento
+}
+
+enum EstadoCastracaoAnimal {
+  nao_castrado
+  agendada
+  realizada
+  cancelada
+}
+
+enum OrigemCastracaoAnimal {
+  fluxo
+  legada
 }
 
 enum TipoEventoAnimal {
@@ -95,6 +106,7 @@ enum TipoEventoAnimal {
   foto
   exame
   diagnostico
+  castracao
   revogacao_situacao_terminal
 }
 
@@ -123,6 +135,7 @@ model Usuario {
   adocoesRealizadas      Adocao[]           @relation("AdocaoRealizadaPor")
   liberacoesConcedidas   LiberacaoAdocao[]  @relation("LiberacaoConcedidaPor")
   devolucoesRecebidas    Devolucao[]        @relation("DevolucaoRecebidaPor")
+  castracoesAnimais      CastracaoAnimal[]
 
   @@map("usuarios")
 }
@@ -233,7 +246,6 @@ model Animal {
   corPelagem                String?
   situacao                  SituacaoAnimal        @default(em_tratamento)
   emIsolamento              Boolean               @default(false)
-  castrado                  StatusCastracaoAnimal @default(nao_informado)
   pesoAtualKg               Decimal?              @db.Decimal(7, 3)
   dataAcolhimento           DateTime?
   dataNascimento            DateTime?
@@ -256,11 +268,37 @@ model Animal {
   eventos     EventoAnimal[]
   adocoes     Adocao[]
   liberacoes  LiberacaoAdocao[]
+  castracoes  CastracaoAnimal[]
 
   @@index([especie, situacao])
   @@index([baiaId])
   @@index([racaId])
   @@map("animais")
+}
+
+model CastracaoAnimal {
+  id                  Int                    @id @default(autoincrement())
+  animalId            Int
+  tipo                TipoCastracaoAnimal
+  estado              EstadoCastracaoAnimal
+  origem              OrigemCastracaoAnimal  @default(fluxo)
+  dataHoraPlanejada   DateTime?
+  dataEfetiva         DateTime?
+  dataEfetivaTemHora  Boolean                @default(false)
+  dataAvaliacao       DateTime?
+  observacao          String?
+  motivoCancelamento  String?
+  usuarioId           Int?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  animal  Animal   @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([animalId, createdAt])
+  @@index([estado, dataHoraPlanejada])
+  @@index([usuarioId])
+  @@map("castracoes_animais")
 }
 
 model FotoAnimal {

@@ -1,4 +1,4 @@
-import { LucideIcon, ShieldCheck } from "lucide-react";
+import { CalendarCheck, LucideIcon, ShieldCheck } from "lucide-react";
 import { LayoutDashboard, MapPin, Dog } from "lucide-react";
 
 export type NavItem = {
@@ -34,7 +34,7 @@ export const navGroups: NavGroup[] = [
       { href: "/painel/animais", id: "animais", label: "Animais", icon: Dog },
       { href: "/painel/baias", id: "baias", label: "Baias", icon: MapPin },
       // { href: "/painel/vacinacao", id: "vacinacao", label: "Vacinação" },
-      // { href: "/painel/castracoes", id: "castracoes", label: "Castrações" },
+      { href: "/painel/castracoes", id: "castracoes", label: "Castrações", icon: CalendarCheck },
       // { href: "/painel/adocoes", id: "adocoes", label: "Adoções" },
     ],
   },

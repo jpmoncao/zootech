@@ -99,14 +99,14 @@ export function Shell({ section, title, children }: ShellProps) {
   }
 
   return (
-    <div className="group [height:100vh] [min-height:100vh] [display:grid] [grid-template-columns:216px_1fr] [background:var(--bg)] [color:var(--ink)] [font-size:14px] min-[761px]:max-[1023px]:[grid-template-columns:72px_1fr] max-[760px]:[grid-template-columns:1fr]" data-nav={navOpen ? "open" : "closed"}>
+    <div className="group h-dvh max-h-dvh overflow-hidden [display:grid] [grid-template-columns:216px_1fr] [background:var(--bg)] [color:var(--ink)] [font-size:14px] min-[761px]:max-[1023px]:[grid-template-columns:72px_1fr] max-[760px]:[grid-template-columns:1fr]" data-nav={navOpen ? "open" : "closed"}>
       <a className="[position:absolute] [left:16px] [top:8px] [z-index:20] [transform:translateY(-140%)] [background:var(--surface)] [color:var(--ink)] [padding:8px_12px] [border-radius:8px] focus:[transform:none]" href="#conteudo">
         Ir para o conteúdo
       </a>
       {navOpen ? (
         <Button className="[display:none] max-[760px]:[display:block] max-[760px]:[position:fixed] max-[760px]:[inset:0] max-[760px]:[width:auto] max-[760px]:[height:auto] max-[760px]:[padding:0] max-[760px]:[border:0] max-[760px]:[border-radius:0] max-[760px]:[background:rgba(12,_21,_20,_0.45)] max-[760px]:[z-index:25]" variant="ghost" type="button" aria-label="Fechar menu" onClick={() => setNavOpen(false)} />
       ) : null}
-      <aside className="[view-transition-name:zoot-wall] [background:var(--primary-700)] [color:var(--on-dark)] [padding:18px_12px_24px] [display:flex] [flex-direction:column] [gap:4px] [min-height:100vh] min-[761px]:max-[1023px]:[padding-inline:8px] max-[760px]:[position:fixed] max-[760px]:[z-index:30] max-[760px]:[inset:0_auto_0_0] max-[760px]:[width:min(280px,_88vw)] max-[760px]:[transform:translateX(-105%)] max-[760px]:[transition:transform_180ms_cubic-bezier(0.16,_1,_0.3,_1)] max-[760px]:group-data-[nav=open]:[transform:none] motion-reduce:[transition:none]">
+      <aside className="[view-transition-name:zoot-wall] min-h-0 overflow-y-auto overscroll-none [background:var(--primary-700)] [color:var(--on-dark)] [padding:18px_12px_24px] [display:flex] [flex-direction:column] [gap:4px] min-[761px]:max-[1023px]:[padding-inline:8px] max-[760px]:[position:fixed] max-[760px]:[z-index:30] max-[760px]:[inset:0_auto_0_0] max-[760px]:[width:min(280px,_88vw)] max-[760px]:[transform:translateX(-105%)] max-[760px]:[transition:transform_180ms_cubic-bezier(0.16,_1,_0.3,_1)] max-[760px]:group-data-[nav=open]:[transform:none] motion-reduce:[transition:none]">
         <div className="[display:flex] [gap:12px] [align-items:center] [color:#fff] [position:relative] [z-index:1] [&_b]:[display:block] [&_b]:[font-family:var(--display)] [&_b]:[font-weight:700] [&_b]:[font-size:17px] [&_b]:[letter-spacing:-0.02em] [&_b]:[line-height:1.1] [&_small]:[display:block] [&_small]:[margin-top:3px] [&_small]:[color:var(--on-dark-soft)] [&_small]:[font-size:12px] [padding:4px_8px_16px] [&_b]:[font-size:15px] min-[761px]:max-[1023px]:[&_span]:[position:absolute] min-[761px]:max-[1023px]:[&_span]:[width:1px] min-[761px]:max-[1023px]:[&_span]:[height:1px] min-[761px]:max-[1023px]:[&_span]:[overflow:hidden] min-[761px]:max-[1023px]:[&_span]:[clip:rect(0_0_0_0)] min-[761px]:max-[1023px]:[justify-content:center] min-[761px]:max-[1023px]:[padding-inline:0] max-[760px]:[&_span]:[position:static] max-[760px]:[&_span]:[width:auto] max-[760px]:[&_span]:[height:auto] max-[760px]:[&_span]:[overflow:visible] max-[760px]:[&_span]:[clip:auto]">
           <Mark />
           <span>
@@ -174,7 +174,7 @@ export function Shell({ section, title, children }: ShellProps) {
             </Button>
           </div>
         </header>
-        <main className="[padding:28px_24px_48px] [display:flex] [flex-direction:column] [gap:20px] [max-width:none] [flex:1] [min-height:0] [overflow:auto] [&_h1]:[margin:0] [&_h1]:[font-size:28px] [&_h2]:[margin:8px_0_0] [&_h2]:[font-size:20px] [&_h3]:[margin:0] [&_h3]:[font-size:17px] max-[760px]:[padding:20px_16px_40px]" id="conteudo">
+        <main className="overscroll-none [padding:28px_24px_48px] [display:flex] [flex-direction:column] [gap:20px] [max-width:none] [flex:1] [min-height:0] [overflow:auto] [&_h1]:[margin:0] [&_h1]:[font-size:28px] [&_h2]:[margin:8px_0_0] [&_h2]:[font-size:20px] [&_h3]:[margin:0] [&_h3]:[font-size:17px] max-[760px]:[padding:20px_16px_40px]" id="conteudo">
           {allowed ? (
             (children ?? <EmptySection title={title} />)
           ) : (

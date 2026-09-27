@@ -2,7 +2,7 @@
 
 ## Current Focus
 
-Autenticação JWT concluída (tarefas 1–10). Gestão de baias concluída no escopo inicial e agora integrada à ocupação real por animais na API. Gestão de animais tem persistência, API e front operacional: CRUD autenticado, regras de domínio, timeline, observações, pesagens, eventos, auditoria, revogação terminal, alocação de baias e galeria local. Ajustes de interface antes da tarefa 10: cadastro/edição em `Dialog`, combobox de raça, crop no cliente, caminho relativo de fotos, tooltip de alertas, rascunho da ficha, histórico no padrão das baias e filtros com `Select`.
+Autenticação JWT concluída (tarefas 1–10). Gestão de baias concluída no escopo inicial e agora integrada à ocupação real por animais na API. Gestão de animais tem persistência, API e front operacional: CRUD autenticado, regras de domínio, timeline, observações, pesagens, eventos, auditoria, revogação terminal, alocação de baias e galeria local. Gestão de castrações está concluída no escopo inicial: modelo `CastracaoAnimal`, migrações de legado, API, agenda, ficha, histórico, ações e documentação alinhada. Ajustes de interface antes da tarefa 10: cadastro/edição em `Dialog`, combobox de raça, crop no cliente, caminho relativo de fotos, tooltip de alertas, rascunho da ficha, histórico no padrão das baias e filtros com `Select`.
 
 ## Active Tasks
 
@@ -11,6 +11,10 @@ Autenticação JWT concluída (tarefas 1–10). Gestão de baias concluída no e
 - Gestão de animais: spec `.ai-context/specs/gestao-de-animais.md`, plano `.ai-context/plans/gestao-de-animais.md`, tarefas `.ai-context/tasks/gestao-de-animais.md`.
   - Status: tasks 1, 2, 3, 4, 5, 6, 7, 8 e 9 concluídas; ajustes de interface antes da task 10 concluídos; task 10 é o próximo passo.
   - Notes: cadastro/edição em `Dialog` largo com etapas; raça em combobox (`Não informada`, SRD, catálogo, `Outra`); fotos com botão “Adicionar fotos”, crop quadrado no cliente (`react-easy-crop`) e `AlertDialog` para remoção. `FotoAnimal.caminhoAbsoluto` é relativo (`animais/{id}/{uuid}.webp`) e a API ancora `storage/media` em `apps/api`. Lista mostra só a quantidade de alertas, com descrição no `Tooltip`. Ficha tem baia/localização lado a lado, peso em destaque, rascunho com confirmação ao sair e histórico no padrão `history-list`. Filtros de animais e baias usam `Select`; baia filtra pelo código. Migration `20260924220000_foto_caminho_relativo` converte paths absolutos antigos.
+
+- Gestão de castrações: spec `.ai-context/specs/gestao-de-castracoes.md`, plano `.ai-context/plans/gestao-de-castracoes.md`, tarefas `.ai-context/tasks/gestao-de-castracoes.md`.
+  - Status: tasks 1–9 concluídas.
+  - Notes: `Animal.castrado` foi removido do schema e substituído por `CastracaoAnimal`. As migrations `20260925120000_gestao_castracoes_modelo` e `20260925133000_evento_castracao` foram aplicadas no Postgres local. API de animais mantém compatibilidade temporária derivando `castrado` dos registros e aceitando `sim`/`nao` para criar registros legados. Rotas `/animais/:id/castracoes` consultam, avaliam “não castrado”, registram realizado legado, agendam, reagendam, concluem e cancelam. `GET /animais/castracoes` lista procedimentos globalmente por estado, período e animal com paginação. Mudanças gravam `EventoAnimal` do tipo `castracao` e `AuditoriaEvento` na mesma transação. A página `/painel/castracoes` exibe agenda, atrasados, histórico e operações. Front possui contrato tipado de castrações no `api.ts`, helpers `canViewCastracoes`/`canManageCastracoes` e item `/painel/castracoes` visível para todos os perfis. A lista e a ficha de animais exibem `estadoCastracao` derivado; a ficha oferece ações e histórico com datas, observações, cancelamentos e autor. O campo/filtro/alerta legado `castrado` saiu dos formulários e contratos de animais. A suíte da API passou com 40 testes, incluindo consulta global, permissões, transições, duplicidades e rollback. Validação visual no navegador integrado ficou limitada porque ele bloqueou a API local na porta 3001.
 
 - Gestão de baias em `.ai-context/tasks/gestao-de-baias.md`.
   - Status: concluído no escopo aprovado
@@ -28,6 +32,21 @@ Autenticação JWT concluída (tarefas 1–10). Gestão de baias concluída no e
 
 ## Recent Changes
 
+- 2026-09-25
+  - Change: Task 9 de gestão de castrações concluída com documentação alinhada ao modelo `CastracaoAnimal`, spec de animais atualizada para remover castração como backlog, arquitetura sem duplicidade/desatualização e checklist final fechado.
+  - Reason: Encerrar a entrega de castrações com contexto durável coerente e validação integrada.
+- 2026-09-25
+  - Change: Task 8 de castrações concluída: estado derivado em lista/ficha, histórico e ações na ficha; removidos campo, filtro, alerta e entrada legados `castrado` dos contratos de animais. Reagendamento em estado terminal agora é bloqueado.
+  - Reason: Fazer da castração um registro operacional com datas e autoria, sem edição direta do status no cadastro do animal.
+- 2026-09-25
+  - Change: Task 7 de gestão de castrações concluída com `/painel/castracoes`, agenda paginada, filtros de período/nome/registro, atrasados, histórico e ações de agendar, reagendar, concluir e cancelar. A API ganhou `GET /animais/castracoes` para consulta global.
+  - Reason: Permitir operação e consulta das castrações no painel sem percorrer fichas de animais individualmente. Após iniciar o Postgres, as migrações foram aplicadas e 39 testes da API passaram; typecheck, lint e build também passaram.
+- 2026-09-25
+  - Change: Tasks 3–5 de gestão de castrações concluídas com endpoints em `/animais/:id/castracoes`, regras de agenda/conclusão/cancelamento, timeline `castracao`, auditoria transacional e cobertura de testes de integração para permissões, transições, constraints e rollback.
+  - Reason: Completar a camada de API antes de expor contratos e navegação no front.
+- 2026-09-25
+  - Change: Tasks 1 e 2 de gestão de castrações concluídas com modelo `CastracaoAnimal`, constraints SQL, índices parciais para agendamento ativo/procedimento realizado únicos por animal e migration de status legado sem datas inventadas.
+  - Reason: Substituir o campo isolado `Animal.castrado` pela base persistente do módulo de agenda e histórico de castrações.
 - 2026-09-25
   - Change: `globals.css` ficou só com tokens, reset, tipografia base e tema. Layout das telas passou para utilitários Tailwind no `className`.
   - Reason: Evitar CSS de feature no arquivo global.

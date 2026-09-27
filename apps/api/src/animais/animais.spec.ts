@@ -10,6 +10,7 @@ import * as bcrypt from "bcrypt";
 import sharp from "sharp";
 import request from "supertest";
 import { AppModule } from "../app.module";
+import { AnimaisService } from "./animais.service";
 
 loadLocalEnv(resolve(__dirname, "../../.env"));
 
@@ -132,7 +133,7 @@ describe("animais", () => {
 
       expect(criado.body.criadoPorId).toBe(usuarios.get(perfil)!.id);
       expect(criado.body.alertas.map((alerta: { tipo: string }) => alerta.tipo)).toEqual(
-        expect.arrayContaining(["sem_baia", "castracao_nao_informada"]),
+        expect.arrayContaining(["sem_baia"]),
       );
 
       await request(app.getHttpServer())
@@ -143,11 +144,11 @@ describe("animais", () => {
       const editado = await request(app.getHttpServer())
         .patch(`/animais/${criado.body.id}`)
         .set(auth(token))
-        .send({ corPelagem: `Caramelo ${perfil}`, castrado: "nao" })
+        .send({ corPelagem: `Caramelo ${perfil}` })
         .expect(200);
 
       expect(editado.body.corPelagem).toBe(`Caramelo ${perfil}`);
-      expect(editado.body.castrado).toBe("nao");
+      expect(editado.body.estadoCastracao).toBe("nao_informado");
     }
   });
 
@@ -539,6 +540,263 @@ describe("animais", () => {
 
     expect(detalhe.body.ocupacao).toBe(1);
     expect(detalhe.body.ocupantes).toHaveLength(1);
+  });
+
+  it("opera castrações para os quatro perfis e grava timeline/auditoria com autoria", async () => {
+    for (const perfil of PERFIS) {
+      const token = tokens.get(perfil)!;
+      const userId = usuarios.get(perfil)!.id;
+      const animal = await criarAnimal(token);
+
+      await request(app.getHttpServer())
+        .get(`/animais/${animal.id}/castracoes`)
+        .expect(401);
+
+      const avaliacao = await request(app.getHttpServer())
+        .post(`/animais/${animal.id}/castracoes/avaliacoes`)
+        .set(auth(token))
+        .send({ observacao: `Avaliação ${perfil}` })
+        .expect(201);
+
+      expect(avaliacao.body.estado).toBe("nao_castrado");
+      expect(avaliacao.body.usuarioId).toBe(userId);
+      const aposAvaliacao = await request(app.getHttpServer()).get(`/animais/${animal.id}`).set(auth(token)).expect(200);
+      expect(aposAvaliacao.body.estadoCastracao).toBe("nao_castrado");
+      expect(aposAvaliacao.body.castracoes[0].usuario.id).toBe(userId);
+
+      const dataHoraPlanejada = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      const agendamento = await request(app.getHttpServer())
+        .post(`/animais/${animal.id}/castracoes/agendamentos`)
+        .set(auth(token))
+        .send({ dataHoraPlanejada, observacao: `Agenda ${perfil}` })
+        .expect(201);
+
+      expect(agendamento.body.estado).toBe("agendada");
+      expect(agendamento.body.usuarioId).toBe(userId);
+      const aposAgenda = await request(app.getHttpServer()).get(`/animais/${animal.id}`).set(auth(token)).expect(200);
+      expect(aposAgenda.body.estadoCastracao).toBe("agendada");
+
+      const novaData = new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString();
+      const reagendado = await request(app.getHttpServer())
+        .patch(`/animais/${animal.id}/castracoes/${agendamento.body.id}/reagendar`)
+        .set(auth(token))
+        .send({ dataHoraPlanejada: novaData })
+        .expect(200);
+
+      expect(reagendado.body.dataHoraPlanejada).toBe(novaData);
+
+      const concluido = await request(app.getHttpServer())
+        .patch(`/animais/${animal.id}/castracoes/${agendamento.body.id}/concluir`)
+        .set(auth(token))
+        .send({ dataEfetiva: "2026-09-25", dataEfetivaTemHora: false, observacao: "Concluída" })
+        .expect(200);
+
+      expect(concluido.body.estado).toBe("realizada");
+      expect(concluido.body.dataEfetivaTemHora).toBe(false);
+
+      const detalhe = await request(app.getHttpServer())
+        .get(`/animais/${animal.id}`)
+        .set(auth(token))
+        .expect(200);
+
+      expect(detalhe.body.estadoCastracao).toBe("realizada");
+      expect(detalhe.body.castracoes.map((castracao: { id: number }) => castracao.id)).toContain(concluido.body.id);
+
+      const timeline = await request(app.getHttpServer())
+        .get(`/animais/${animal.id}/timeline`)
+        .set(auth(token))
+        .expect(200);
+
+      expect(timeline.body.map((evento: { tipo: string }) => evento.tipo)).toContain("castracao");
+
+      const auditoria = await prisma.auditoriaEvento.findMany({
+        where: {
+          tipo: "animal_castracao_alterada",
+          usuarioId: userId,
+          dados: { path: ["entidadeId"], equals: String(animal.id) },
+        },
+      });
+      expect(auditoria.length).toBeGreaterThanOrEqual(4);
+    }
+  });
+
+  it("preserva cancelamentos, permite nova tentativa e bloqueia duplicidades de castração", async () => {
+    const token = tokens.get("coordenacao")!;
+    const animal = await criarAnimal(token);
+
+    await request(app.getHttpServer())
+      .post(`/animais/${animal.id}/castracoes/agendamentos`)
+      .set(auth(token))
+      .send({ dataHoraPlanejada: "2020-01-01T10:00:00.000Z" })
+      .expect(400);
+
+    const primeiraData = new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString();
+    const primeiro = await request(app.getHttpServer())
+      .post(`/animais/${animal.id}/castracoes/agendamentos`)
+      .set(auth(token))
+      .send({ dataHoraPlanejada: primeiraData })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post(`/animais/${animal.id}/castracoes/agendamentos`)
+      .set(auth(token))
+      .send({ dataHoraPlanejada: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString() })
+      .expect(409);
+
+    await request(app.getHttpServer())
+      .patch(`/animais/${animal.id}/castracoes/${primeiro.body.id}/cancelar`)
+      .set(auth(token))
+      .send({ motivo: "Tutor indisponível" })
+      .expect(200);
+    const aposCancelamento = await request(app.getHttpServer()).get(`/animais/${animal.id}`).set(auth(token)).expect(200);
+    expect(aposCancelamento.body.estadoCastracao).toBe("cancelada");
+    expect(aposCancelamento.body.castracoes[0].motivoCancelamento).toBe("Tutor indisponível");
+
+    const segundo = await request(app.getHttpServer())
+      .post(`/animais/${animal.id}/castracoes/agendamentos`)
+      .set(auth(token))
+      .send({ dataHoraPlanejada: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString() })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .patch(`/animais/${animal.id}/castracoes/${primeiro.body.id}/concluir`)
+      .set(auth(token))
+      .send({ dataEfetiva: "2026-09-25" })
+      .expect(409);
+
+    await request(app.getHttpServer())
+      .patch(`/animais/${animal.id}/castracoes/${segundo.body.id}/concluir`)
+      .set(auth(token))
+      .send({ dataEfetiva: "2026-09-25T13:30:00.000Z" })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .post(`/animais/${animal.id}/castracoes/legado-realizado`)
+      .set(auth(token))
+      .send({})
+      .expect(409);
+
+    const registros = await request(app.getHttpServer())
+      .get(`/animais/${animal.id}/castracoes`)
+      .set(auth(token))
+      .expect(200);
+
+    expect(registros.body.map((registro: { estado: string }) => registro.estado)).toEqual(
+      expect.arrayContaining(["cancelada", "realizada"]),
+    );
+  });
+
+  it("expõe registro realizado legado sem inventar data na lista e na ficha", async () => {
+    const token = tokens.get("coordenacao")!;
+    const animal = await criarAnimal(token);
+    const legado = await request(app.getHttpServer())
+      .post(`/animais/${animal.id}/castracoes/legado-realizado`)
+      .set(auth(token))
+      .send({ observacao: "Procedimento anterior ao sistema" })
+      .expect(201);
+    expect(legado.body.dataEfetiva).toBeNull();
+
+    const detalhe = await request(app.getHttpServer()).get(`/animais/${animal.id}`).set(auth(token)).expect(200);
+    expect(detalhe.body.estadoCastracao).toBe("realizada");
+    expect(detalhe.body.castracoes[0]).toMatchObject({ origem: "legada", dataEfetiva: null, observacao: "Procedimento anterior ao sistema" });
+
+    const lista = await request(app.getHttpServer()).get("/animais")
+      .query({ busca: animal.numeroRegistro }).set(auth(token)).expect(200);
+    expect(lista.body.items[0].estadoCastracao).toBe("realizada");
+  });
+
+  it("lista agenda global com busca, período, ordenação e paginação", async () => {
+    const token = tokens.get("recepcao")!;
+    const primeiro = await criarAnimal(token);
+    const segundo = await criarAnimal(token);
+    const dia = new Date(Date.now() + 12 * 24 * 60 * 60 * 1000);
+    const maisCedo = new Date(dia);
+    maisCedo.setUTCHours(10, 0, 0, 0);
+    const maisTarde = new Date(dia);
+    maisTarde.setUTCHours(14, 0, 0, 0);
+    await request(app.getHttpServer()).post(`/animais/${primeiro.id}/castracoes/agendamentos`)
+      .set(auth(token)).send({ dataHoraPlanejada: maisTarde.toISOString() }).expect(201);
+    await request(app.getHttpServer()).post(`/animais/${segundo.id}/castracoes/agendamentos`)
+      .set(auth(token)).send({ dataHoraPlanejada: maisCedo.toISOString() }).expect(201);
+
+    await request(app.getHttpServer()).get("/animais/castracoes").expect(401);
+    const agenda = await request(app.getHttpServer()).get("/animais/castracoes")
+      .query({ estado: "agendada", de: maisCedo.toISOString().slice(0, 10), ate: maisCedo.toISOString().slice(0, 10) })
+      .set(auth(token)).expect(200);
+    const posicoes = agenda.body.itens.map((item: { id: number; dataHoraPlanejada: string }) => ({ id: item.id, date: item.dataHoraPlanejada }));
+    expect(posicoes.findIndex((item: { date: string }) => item.date === maisCedo.toISOString()))
+      .toBeLessThan(posicoes.findIndex((item: { date: string }) => item.date === maisTarde.toISOString()));
+
+    const filtrada = await request(app.getHttpServer()).get("/animais/castracoes")
+      .query({ busca: segundo.numeroRegistro, estado: "agendada", pagina: 1, limite: 1 })
+      .set(auth(token)).expect(200);
+    expect(filtrada.body.total).toBe(1);
+    expect(filtrada.body.itens[0].animal.id).toBe(segundo.id);
+    await request(app.getHttpServer()).get("/animais/castracoes")
+      .query({ de: "2026-09-26", ate: "2026-09-25" }).set(auth(token)).expect(400);
+  });
+
+  it("bloqueia mutações de castração em animal terminal, mas permite cancelar agendamento existente", async () => {
+    const token = tokens.get("coordenacao")!;
+    const animal = await criarAnimal(token);
+    const agendamento = await request(app.getHttpServer())
+      .post(`/animais/${animal.id}/castracoes/agendamentos`)
+      .set(auth(token))
+      .send({ dataHoraPlanejada: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString() })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .patch(`/animais/${animal.id}`)
+      .set(auth(token))
+      .send({ situacao: "obito" })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .post(`/animais/${animal.id}/castracoes/agendamentos`)
+      .set(auth(token))
+      .send({ dataHoraPlanejada: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString() })
+      .expect(409);
+
+    await request(app.getHttpServer())
+      .patch(`/animais/${animal.id}/castracoes/${agendamento.body.id}/reagendar`)
+      .set(auth(token))
+      .send({ dataHoraPlanejada: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString() })
+      .expect(409);
+
+    await request(app.getHttpServer())
+      .patch(`/animais/${animal.id}/castracoes/${agendamento.body.id}/concluir`)
+      .set(auth(token))
+      .send({ dataEfetiva: "2026-09-25" })
+      .expect(409);
+
+    await request(app.getHttpServer())
+      .patch(`/animais/${animal.id}/castracoes/${agendamento.body.id}/cancelar`)
+      .set(auth(token))
+      .send({ motivo: "Animal em óbito" })
+      .expect(200);
+  });
+
+  it("reverte a castração quando a auditoria falha na mesma transação", async () => {
+    const token = tokens.get("coordenacao")!;
+    const animal = await criarAnimal(token);
+    const spy = jest
+      .spyOn(AnimaisService.prototype as unknown as { createAudit: (...args: unknown[]) => Promise<void> }, "createAudit")
+      .mockImplementation(async (...args: unknown[]) => {
+        if (args[3] === "animal_castracao_alterada") throw new Error("falha simulada de auditoria");
+      });
+
+    await request(app.getHttpServer())
+      .post(`/animais/${animal.id}/castracoes/agendamentos`)
+      .set(auth(token))
+      .send({ dataHoraPlanejada: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() })
+      .expect(500);
+
+    spy.mockRestore();
+
+    const registros = await prisma.castracaoAnimal.findMany({ where: { animalId: animal.id } });
+    const eventos = await prisma.eventoAnimal.findMany({ where: { animalId: animal.id, tipo: "castracao" } });
+    expect(registros).toHaveLength(0);
+    expect(eventos).toHaveLength(0);
   });
 
   it("processa upload autenticado de fotos, comprime quadrado e serve por rota controlada", async () => {
