@@ -1,10 +1,12 @@
+import { Transform } from "class-transformer";
 import { IsEmail, IsOptional, IsString, Length, MaxLength } from "class-validator";
 
 export class CreateTutorDto {
   @IsString() @MaxLength(120) nome!: string;
   @IsString() cpf!: string;
   @IsString() @MaxLength(30) telefone!: string;
-  @IsOptional() @IsEmail() @MaxLength(254) email?: string;
+  @Transform(({ value }) => typeof value === "string" && value.trim() === "" ? null : value)
+  @IsOptional() @IsEmail() @MaxLength(254) email?: string | null;
   @IsString() @MaxLength(40) tipoDocumento!: string;
   @IsString() @MaxLength(40) numeroDocumento!: string;
   @IsString() @MaxLength(9) cep!: string;

@@ -32,10 +32,18 @@ export type AcaoBaia =
 
 export type BaiaOcupante = {
   id: number;
-  nome?: string;
-  codigo?: string;
-  especie?: string;
-  emIsolamento?: boolean;
+  nome: string;
+  numeroRegistro: string;
+  especie: EspecieAnimal;
+  sexo: SexoAnimal;
+  situacao: SituacaoAnimal;
+  emIsolamento: boolean;
+  idadeAproximada: boolean;
+  raca: Pick<RacaAnimal, "nome" | "tipo"> | null;
+  fotos: Pick<FotoAnimal, "id" | "url" | "identificacao">[];
+  castracoes: Pick<CastracaoAnimal, "id" | "tipo" | "estado" | "dataHoraPlanejada" | "dataEfetiva" | "dataEfetivaTemHora" | "createdAt">[];
+  estadoCastracao: StatusCastracaoAnimal;
+  alertas: AnimalAlerta[];
 };
 
 export type Baia = {
@@ -86,6 +94,13 @@ export type BaiaHistoricoEvento = {
   usuarioId: number | null;
   createdAt: string;
   usuario: Pick<PublicUser, "id" | "nome"> | null;
+  movimentacao?: {
+    direcao: "entrada" | "saida";
+    animalId: number;
+    animal: { id: number; nome: string; numeroRegistro: string; especie: EspecieAnimal } | null;
+    baiaRelacionada: { id: number; codigo: string } | null;
+    observacao: string | null;
+  };
 };
 
 export type EspecieAnimal = "cao" | "gato";

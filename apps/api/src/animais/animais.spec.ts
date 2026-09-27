@@ -388,6 +388,7 @@ describe("animais", () => {
       .expect(200);
 
     expect(detalhe.body.situacao).toBe("adotado");
+    expect(detalhe.body.alertas.map((alerta: { tipo: string }) => alerta.tipo)).not.toContain("sem_baia");
     expect(detalhe.body.adocoes).toHaveLength(1);
     expect(detalhe.body.adocoes[0]).toMatchObject({
       id: resposta.body.id,

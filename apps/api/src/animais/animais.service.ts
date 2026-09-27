@@ -40,6 +40,7 @@ import { ListAnimaisDto } from "./dto/list-animais.dto";
 import { ListCastracoesDto } from "./dto/list-castracoes.dto";
 import { RevogarSituacaoDto } from "./dto/revogar-situacao.dto";
 import { UpdateAnimalDto } from "./dto/update-animal.dto";
+import { estadoCastracaoAnimal } from "./estado-castracao";
 
 const TERMINAIS: SituacaoAnimal[] = ["adotado", "obito"];
 const FOTO_MAX_BYTES = 5 * 1024 * 1024;
@@ -846,11 +847,7 @@ export class AnimaisService {
   }
 
   private estadoCastracao(castracoes: CastracaoAnimal[]): "agendada" | "realizada" | "nao_castrado" | "cancelada" | "nao_informado" {
-    if (castracoes.some((item) => item.tipo === "procedimento" && item.estado === "realizada")) return "realizada";
-    if (castracoes.some((item) => item.tipo === "procedimento" && item.estado === "agendada")) return "agendada";
-    if (castracoes.some((item) => item.tipo === "avaliacao" && item.estado === "nao_castrado")) return "nao_castrado";
-    if (castracoes.some((item) => item.estado === "cancelada")) return "cancelada";
-    return "nao_informado";
+    return estadoCastracaoAnimal(castracoes);
   }
 
   private requiredText(value: string, message: string) {
@@ -893,7 +890,7 @@ export class AnimaisService {
 
   private alertas(animal: AnimalListEntity | AnimalDetailEntity) {
     const alertas: { tipo: string; mensagem: string }[] = [];
-    if (!animal.baiaId) alertas.push({ tipo: "sem_baia", mensagem: "Animal sem baia alocada." });
+    if (!animal.baiaId && !TERMINAIS.includes(animal.situacao)) alertas.push({ tipo: "sem_baia", mensagem: "Animal sem baia alocada." });
     if (animal.sexo === "nao_informado") alertas.push({ tipo: "sexo_nao_informado", mensagem: "Sexo não informado." });
     if (!animal.raca || animal.raca.tipo === "nao_informada") alertas.push({ tipo: "raca_nao_informada", mensagem: "Raça não informada." });
     if (animal.idadeAproximada) alertas.push({ tipo: "idade_aproximada", mensagem: "Idade aproximada." });

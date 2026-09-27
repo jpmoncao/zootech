@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, RefreshCw } from "lucide-react";
+import { ArrowLeft, ClipboardCheck, RefreshCw } from "lucide-react";
 import { AdocaoPanel } from "@/components/adocao-panel";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -17,6 +17,7 @@ import { BaiaFicha } from "./baia-card";
 import { CastracoesCard } from "./castracoes-card";
 import { DadosFicha } from "./dados-ficha";
 import { ExamesFicha } from "./exames-card";
+import { painelFicha, SectionHeader } from "./ficha-ui";
 import { GaleriaFicha } from "./galeria-card";
 import { HistoricoFicha } from "./historico";
 import { ObservacoesFicha } from "./observacoes-card";
@@ -212,7 +213,10 @@ function Ficha({
             <GaleriaFicha animal={animal} disabled={!podeEditar} onChanged={onChanged} />
             <BaiaFicha animal={animal} baias={baias} disabled={!podeEditar} onChanged={onChanged} />
             <CastracoesCard animal={animal} onChanged={onChanged} />
-            <AdocaoPanel animal={animal} baias={baias} podeLiberar={podeLiberar} onChanged={onChanged} />
+            <section id="adocao-ficha" className={painelFicha} aria-label="Adoção">
+              <SectionHeader icon={<ClipboardCheck aria-hidden="true" />} title="Adoção" note="Registro e histórico da guarda" />
+              <AdocaoPanel animal={animal} baias={baias} podeLiberar={podeLiberar} onChanged={onChanged} />
+            </section>
             <PesoFicha animal={animal} disabled={!podeEditar} onChanged={onChanged} />
             <ObservacoesFicha animal={animal} disabled={!podeEditar} onChanged={onChanged} />
             <ExamesFicha animal={animal} disabled={!podeEditar} onChanged={onChanged} />

@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import type { EventoAnimal, TipoEventoAnimal } from "@/lib/api";
 
-export type TomEventoAnimal = "ok" | "info" | "crit" | "muted";
+export type TomEventoAnimal = "ok" | "info" | "crit" | "muted" | "violet";
 
 export type VisualEventoAnimal = {
   label: string;
@@ -72,11 +72,22 @@ export function eventoVisual(evento: EventoAnimal): VisualEventoAnimal {
     const acao = castracaoAcao(evento.dados);
     if (acao && castracaoEventoVisual[acao]) return castracaoEventoVisual[acao];
   }
+  if (evento.tipo === "mudanca_situacao" && situacaoTerminal(evento.dados)) {
+    return { label: eventoLabel.mudanca_situacao, tone: "violet", icon: eventoIcon.mudanca_situacao };
+  }
   return {
     label: eventoLabel[evento.tipo] ?? evento.tipo,
     tone: eventoTone(evento.tipo),
     icon: eventoIcon[evento.tipo] ?? FileTextIcon,
   };
+}
+
+function situacaoTerminal(dados: unknown) {
+  if (!dados || typeof dados !== "object") return false;
+  const registro = dados as { adocaoId?: unknown; devolucaoId?: unknown; mudancas?: { situacao?: { depois?: unknown } } };
+  if (registro.adocaoId != null && registro.devolucaoId == null) return true;
+  const depois = registro.mudancas?.situacao?.depois;
+  return depois === "adotado" || depois === "obito";
 }
 
 function castracaoAcao(dados: unknown) {
