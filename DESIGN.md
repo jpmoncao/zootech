@@ -143,7 +143,7 @@ components:
 
 **Creative North Star: "A Parede Petróleo"**
 
-ZooTech é identidade de serviço público sanitário, não de vitrine nem de loja de pet. A parede verde-petróleo do login e a lateral do painel são a mesma matéria: autoridade quieta, contraste alto, zero hero de métricas. O miolo opera em névoa e branco; o posto do turno é o centro do painel, não um dashboard de KPIs.
+ZooTech é identidade de serviço público sanitário, não de vitrine nem de loja de pet. A parede verde-petróleo do login e a lateral do painel são a mesma matéria: autoridade quieta e contraste alto. O miolo opera em névoa e branco; o painel operacional reúne indicadores em grupos de leitura com rótulos e contexto.
 
 A tipografia carrega a hierarquia: Bricolage Grotesque só nos títulos e na marca, Figtree na interface operacional, IBM Plex Mono no CPF, na matrícula e em identificadores. O escudo âmbar é marcador provisório — não brasão municipal, não acento de UI.
 
@@ -220,7 +220,7 @@ Na baia, o estado operacional e a ação que leva a ele usam a mesma cor: ativa 
 Login desktop: grid 1fr 1fr. Esquerda = parede petróleo em tela cheia (padding 40px); direita = formulário branco (padding 48×64, max-width 560px), campos altos e botão em largura total. Shell desktop: grid 216px + 1fr; conteúdo max-width 880px, padding 28×24. Em ≤1023px a lateral vira trilho de 72px (rótulos ocultos). Em ≤760px o login empilha e o menu vira drawer fixo (≤280px / 88vw) com backdrop.
 
 ### Named Rules
-**The Wall Continuity Rule.** A mesma parede petróleo do login vira o menu de 216 px; o miolo do painel é o posto, não um hero de métricas.
+**The Wall Continuity Rule.** A mesma parede petróleo do login vira o menu de 216 px; os indicadores do painel ficam em superfícies claras, agrupados por assunto.
 
 ## Elevation & Depth
 
@@ -253,6 +253,7 @@ Cantos funcionais, sem pílulas de marketing: campo 6px, controles interativos 8
 
 ### Cards / Containers
 - **Panel:** superfície, borda linha, raio 10px, padding 20px, sombra panel — só onde há interação (ex.: confirmar posto).
+- **Grupos de indicadores:** superfície, borda linha, raio 10px e padding 20px, sem sombra; rótulo, número tabular e descrição permanecem juntos. No painel operacional, os grupos usam espaçamento de 24px e empilham no mobile; acompanhamento clínico e pendências dividem duas colunas a partir de 768px. Ocupação usa linhas com divisores, capacidade e vagas em texto; irregularidades recebem alerta crítico com a causa explícita.
 - **Alert:** raio 8px, padding 12×14, soft + borda tonal + texto escuro (info / ok / warn).
 - **Skeleton:** pulso em petróleo suave (`bg-muted`), raio 8px, no lugar da lista, do painel ou do formulário enquanto a consulta inicial não chega. Título e ações que não dependem da resposta permanecem. Sem texto “Carregando…” no meio da área. Botão em envio pode ter spinner. Erro é alerta; vazio depois da resposta é o estado vazio, sem skeleton.
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
@@ -156,17 +157,18 @@ export default function Page() {
 }
 
 function Animais() {
+  const searchParams = useSearchParams();
   const user = getCurrentUser();
   const podeAdministrar = user ? canManageAnimais(user.perfilAcesso) : false;
   const [resultado, setResultado] = useState<ListaAnimais | null>(null);
-  const [filtros, setFiltros] = useState<ListarAnimaisFiltros>(filtrosIniciais);
-  const [busca, setBusca] = useState("");
+  const [filtros, setFiltros] = useState<ListarAnimaisFiltros>(() => filtrosDaUrl(searchParams));
+  const [busca, setBusca] = useState(() => searchParams.get("busca") ?? "");
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Animal | null>(null);
   const [baias, setBaias] = useState<Baia[]>([]);
-  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
+  const [filtrosAbertos, setFiltrosAbertos] = useState(() => temFiltrosAtivos(filtrosDaUrl(searchParams)));
 
   useEffect(() => {
     void carregar(filtros);
@@ -374,6 +376,14 @@ function Animais() {
                   onValueChange={(value) => atualizarFiltros({ ...filtros, porte: valorEnum<PorteAnimal>(value === FILTER_ALL ? "" : value) })}
                   options={[{ value: FILTER_ALL, label: "Todos" }, ...portes.map((porte) => ({ value: porte, label: porteLabel[porte] }))]}
                 />
+              </div>
+              <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
+                <Label htmlFor="animal-adotada-de">Adoção a partir de</Label>
+                <Input id="animal-adotada-de" type="date" value={filtros.adotadaDe ?? ""} onChange={(event) => atualizarFiltros({ ...filtros, adotadaDe: event.target.value || undefined, incluirTerminais: true })} />
+              </div>
+              <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
+                <Label htmlFor="animal-adotada-ate">Adoção até</Label>
+                <Input id="animal-adotada-ate" type="date" value={filtros.adotadaAte ?? ""} onChange={(event) => atualizarFiltros({ ...filtros, adotadaAte: event.target.value || undefined, incluirTerminais: true })} />
               </div>
               <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
                 <Label htmlFor="animal-baia">Baia</Label>
@@ -1225,7 +1235,9 @@ function temFiltrosAtivos(filtros: ListarAnimaisFiltros) {
       filtros.baiaId ||
       filtros.semBaia ||
       filtros.comAlertas ||
-      filtros.incluirTerminais,
+      filtros.incluirTerminais ||
+      filtros.adotadaDe ||
+      filtros.adotadaAte,
   );
 }
 
@@ -1239,8 +1251,28 @@ function chipsFiltro(filtros: ListarAnimaisFiltros, baias: Baia[]) {
   if (filtros.semBaia) chips.push("Sem baia");
   else if (filtros.baiaId) chips.push(baias.find((baia) => baia.id === filtros.baiaId)?.codigo ?? `Baia ${filtros.baiaId}`);
   if (filtros.comAlertas) chips.push("Com alertas");
+  if (filtros.adotadaDe) chips.push(`Adoção desde ${filtros.adotadaDe}`);
+  if (filtros.adotadaAte) chips.push(`Adoção até ${filtros.adotadaAte}`);
   if (filtros.incluirTerminais) chips.push("Incluir terminais");
   return chips;
+}
+
+function filtrosDaUrl(params: ReturnType<typeof useSearchParams>): ListarAnimaisFiltros {
+  const situacao = params.get("situacao") as SituacaoAnimal | null;
+  const baiaIdRaw = params.get("baiaId");
+  const baiaId = baiaIdRaw && /^\d+$/.test(baiaIdRaw) && Number(baiaIdRaw) > 0 ? Number(baiaIdRaw) : undefined;
+  const adotadaDe = params.get("adotadaDe") || undefined;
+  const adotadaAte = params.get("adotadaAte") || undefined;
+  const incluirTerminais = params.get("incluirTerminais") === "true" || Boolean(adotadaDe || adotadaAte);
+  return {
+    pagina: 1,
+    limite: 12,
+    situacao: situacao && situacoes.includes(situacao) ? situacao : undefined,
+    baiaId,
+    adotadaDe,
+    adotadaAte,
+    incluirTerminais: incluirTerminais || undefined,
+  };
 }
 
 function AnimaisSkeleton() {

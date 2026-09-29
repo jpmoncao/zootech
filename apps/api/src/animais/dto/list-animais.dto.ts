@@ -1,5 +1,5 @@
 import { Transform, Type } from "class-transformer";
-import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, Min } from "class-validator";
+import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Matches, Max, Min } from "class-validator";
 
 export class ListAnimaisDto {
   @IsOptional() @IsString() busca?: string;
@@ -11,6 +11,8 @@ export class ListAnimaisDto {
   @IsOptional() @Transform(({ value }) => value === true || value === "true") @IsBoolean() semBaia?: boolean;
   @IsOptional() @Transform(({ value }) => value === true || value === "true") @IsBoolean() comAlertas?: boolean;
   @IsOptional() @Transform(({ value }) => value === true || value === "true") @IsBoolean() incluirTerminais?: boolean;
+  @IsOptional() @Matches(/^\d{4}-\d{2}-\d{2}$/) adotadaDe?: string;
+  @IsOptional() @Matches(/^\d{4}-\d{2}-\d{2}$/) adotadaAte?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) pagina?: number;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) limite?: number;
 }

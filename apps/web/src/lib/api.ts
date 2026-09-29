@@ -1,3 +1,27 @@
+export type Dashboard = {
+  atualizadoEm: string;
+  plantel: { animaisAtivos: number; animaisAlojados: number; disponiveisAdocao: number };
+  acompanhamentoClinico: { emTratamento: number; emQuarentena: number };
+  pendencias: {
+    castracoesAgendadas: number;
+    vacinas: { estado: "futura_implementacao"; mensagem: string };
+  };
+  ocupacao: {
+    baiasAtivas: { baiaId: number; codigo: string; ocupantes: number; capacidade: number; estado: "ativa" }[];
+    irregulares: { animalAtivoEmBaiaNaoAtiva: number; animalTerminalAlocado: number };
+  };
+  adocoes: {
+    mesAtual: { inicio: string; fim: string; total: number };
+    mesAnterior: { inicio: string; fim: string; total: number };
+    variacaoAbsoluta: number;
+    variacaoPercentual: number | null;
+  };
+};
+
+export function obterDashboard(): Promise<Dashboard> {
+  return request<Dashboard>("/dashboard", { method: "GET" });
+}
+
 export type PerfilAcesso = "coordenacao" | "veterinario" | "agente" | "recepcao";
 
 export type PublicUser = {
@@ -254,6 +278,8 @@ export type ListarAnimaisFiltros = {
   semBaia?: boolean;
   comAlertas?: boolean;
   incluirTerminais?: boolean;
+  adotadaDe?: string;
+  adotadaAte?: string;
   pagina?: number;
   limite?: number;
 };
@@ -667,6 +693,8 @@ export function listarAnimais(filtros: ListarAnimaisFiltros = {}): Promise<Lista
   if (filtros.semBaia) params.set("semBaia", "true");
   if (filtros.comAlertas) params.set("comAlertas", "true");
   if (filtros.incluirTerminais) params.set("incluirTerminais", "true");
+  if (filtros.adotadaDe) params.set("adotadaDe", filtros.adotadaDe);
+  if (filtros.adotadaAte) params.set("adotadaAte", filtros.adotadaAte);
   if (filtros.pagina) params.set("pagina", String(filtros.pagina));
   if (filtros.limite) params.set("limite", String(filtros.limite));
   const query = params.toString();
