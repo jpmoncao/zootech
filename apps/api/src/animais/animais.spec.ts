@@ -237,6 +237,50 @@ describe("animais", () => {
       .expect(200);
   });
 
+  it("filtra por período de adoção e preserva ciclos históricos devolvidos", async () => {
+    const token = tokens.get("coordenacao")!;
+    const devolvido = await criarAnimal(token, { nome: `Histórico ${STAMP}` });
+    const foraDoPeriodo = await criarAnimal(token, { nome: `Fora ${STAMP}` });
+    const tutor = await prisma.tutor.create({
+      data: {
+        nome: `Tutor filtro ${STAMP}`, cpf: `9876543${STAMP.slice(-4)}`, telefone: "11999999999",
+        tipoDocumento: "RG", numeroDocumento: `RG-FILTRO-${STAMP}`, cep: "01001000", logradouro: "Rua A",
+        numero: "10", bairro: "Centro", cidade: "São Paulo", uf: "SP",
+      },
+    });
+    const adocao = await prisma.adocao.create({
+      data: {
+        animalId: devolvido.id, tutorId: tutor.id, consentiuTratamento: true, consentiuAcompanhamento: true,
+        caminhoAssinatura: "adocoes/teste.webp", nomeArquivoAssinatura: "teste.webp", mimeTypeAssinatura: "image/webp", tamanhoAssinatura: 1,
+        adotadaEm: new Date("2026-09-10T15:00:00.000Z"),
+      },
+    });
+    await prisma.devolucao.create({
+      data: { adocaoId: adocao.id, motivo: "Retorno de teste", situacaoRetorno: "saudavel", recebidaPorId: usuarios.get("coordenacao")!.id },
+    });
+    await prisma.adocao.create({
+      data: {
+        animalId: foraDoPeriodo.id, tutorId: tutor.id, consentiuTratamento: true, consentiuAcompanhamento: true,
+        caminhoAssinatura: "adocoes/teste-fora.webp", nomeArquivoAssinatura: "teste-fora.webp", mimeTypeAssinatura: "image/webp", tamanhoAssinatura: 1,
+        adotadaEm: new Date("2026-08-31T23:00:00.000Z"),
+      },
+    });
+
+    const lista = await request(app.getHttpServer())
+      .get("/animais")
+      .query({ adotadaDe: "2026-09-01", adotadaAte: "2026-09-30" })
+      .set(auth(token))
+      .expect(200);
+
+    expect(lista.body.items.map((animal: { id: number }) => animal.id)).toContain(devolvido.id);
+    expect(lista.body.items.map((animal: { id: number }) => animal.id)).not.toContain(foraDoPeriodo.id);
+    await request(app.getHttpServer())
+      .get("/animais")
+      .query({ adotadaDe: "2026-10-01", adotadaAte: "2026-09-01" })
+      .set(auth(token))
+      .expect(400);
+  });
+
   it("grava observações, pesagens, eventos e timeline com autoria sem sobrescrever pesagens", async () => {
     const token = tokens.get("veterinario")!;
     const userId = usuarios.get("veterinario")!.id;
@@ -1092,6 +1136,17 @@ async function createUsuario(prisma: PrismaClient, perfil: PerfilAcesso) {
 }
 
 async function cleanup(prisma: PrismaClient) {
+  const animais = await prisma.animal.findMany({
+    where: { numeroRegistroNormalizado: { startsWith: `ani-${STAMP}` } },
+    select: { id: true },
+  });
+  const animalIds = animais.map((animal) => animal.id);
+  if (animalIds.length > 0) {
+    const adocoes = await prisma.adocao.findMany({ where: { animalId: { in: animalIds } }, select: { id: true } });
+    const adocaoIds = adocoes.map((adocao) => adocao.id);
+    await prisma.devolucao.deleteMany({ where: { adocaoId: { in: adocaoIds } } });
+    await prisma.adocao.deleteMany({ where: { id: { in: adocaoIds } } });
+  }
   await prisma.animal.deleteMany({
     where: { numeroRegistroNormalizado: { startsWith: `ani-${STAMP}` } },
   });

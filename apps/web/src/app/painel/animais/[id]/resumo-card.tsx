@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, CalendarDays, Cat, Dog, DogIcon, HouseHeartIcon, MapPin, Scale } from "lucide-react";
+import { AlertTriangle, CalendarDays, Cat, Dog, HouseHeartIcon, MapPin, Scale } from "lucide-react";
 import { AnimalPhoto } from "@/components/animal-photo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { Animal } from "@/lib/api";

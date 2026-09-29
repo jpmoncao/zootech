@@ -2,6 +2,8 @@
 
 ## Current Focus
 
+Dashboard operacional: task 9 concluída. O contrato está documentado em `.ai-context/specs/dashboard-operacional.md`; `GET /dashboard` agrega plantel, baias ativas, ocupações irregulares, situações clínicas, castrações agendadas e adoções mensais em `America/Sao_Paulo`, com comparação ao mês anterior. A lista de animais aceita `adotadaDe`/`adotadaAte` como limites inclusivos de data local e preserva ciclos históricos devolvidos. A suíte integrada específica cobre autenticação, os quatro perfis, métricas incrementais, estados clínicos/terminais, baias, castrações e adoções históricas. A tela `/painel` consome o contrato tipado com skeleton, erro recuperável, zeros explícitos, ocupação por baia, alerta por causa e comparação mensal. Seus indicadores encaminham para o plantel, situações clínicas, agenda de castrações, detalhe/lista por baia e adoções do mês atual/anterior com filtros reais na URL. Typecheck da API/web, lint web, build web, migrations locais e revisão manual em viewport estreito passaram; a suíte API completa ainda tem conflito 409 preexistente no cenário de adoção e o lint da API mantém quatro parâmetros não usados em fluxo de assinatura.
+
 Autenticação JWT concluída (tarefas 1–10). Gestão de baias concluída no escopo inicial e agora integrada à ocupação real por animais na API. Gestão de animais tem persistência, API e front operacional: CRUD autenticado, regras de domínio, timeline, observações, pesagens, eventos, auditoria, revogação terminal, alocação de baias e galeria local. Gestão de castrações está concluída no escopo inicial: modelo `CastracaoAnimal`, migrações de legado, API, agenda, ficha, histórico, ações e documentação alinhada. Ajustes de interface antes da tarefa 10: cadastro/edição em `Dialog`, combobox de raça, crop no cliente, caminho relativo de fotos, tooltip de alertas, rascunho da ficha, histórico no padrão das baias e filtros com `Select`.
 
 ## Active Tasks
@@ -32,6 +34,9 @@ Autenticação JWT concluída (tarefas 1–10). Gestão de baias concluída no e
 
 ## Recent Changes
 
+- 2026-09-28
+  - Change: Task 8 do dashboard concluída com links para plantel e situações, agenda de castrações, detalhe/lista por baia e períodos mensais de adoção; a lista de animais agora restaura `baiaId` da URL e abre os filtros recebidos.
+  - Reason: Permitir navegar de cada agregado apenas para destinos que reproduzem a contagem com filtros suportados.
 - 2026-09-25
   - Change: Task 9 de gestão de castrações concluída com documentação alinhada ao modelo `CastracaoAnimal`, spec de animais atualizada para remover castração como backlog, arquitetura sem duplicidade/desatualização e checklist final fechado.
   - Reason: Encerrar a entrega de castrações com contexto durável coerente e validação integrada.
@@ -135,7 +140,8 @@ Autenticação JWT concluída (tarefas 1–10). Gestão de baias concluída no e
 
 1. Implementar task 10 de gestão de animais: validação integrada, ajustes finais e atualização de contexto durável.
 2. Recuperar/alinha migrations de adoção, executar a jornada integrada de adoção → devolução → nova adoção e concluir a task 11 de adoção.
-3. Especificar demais funcionalidades do painel ADM que ainda não têm spec.
+3. Corrigir a fragilidade do CPF gerado nos testes de adoção e os parâmetros de assinatura não usados quando esse fluxo voltar ao escopo.
+4. Especificar demais funcionalidades do painel ADM que ainda não têm spec.
 
 ## Things To Remember
 
