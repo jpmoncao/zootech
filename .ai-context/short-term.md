@@ -30,6 +30,27 @@ Autenticação JWT concluída (tarefas 1–10). Gestão de baias concluída no e
   - Status: em andamento
   - Notes: spec de baias registrada em `.ai-context/specs/gestao-de-baias.md`; demais funcionalidades do painel ADM ainda precisam ser especificadas.
 
+## Future Implementations
+
+Backlog solicitado pelo autor em 2026-09-29. Vacinação permanece fora desta lista porque já está em implementação.
+
+- Cadastro e origem do animal:
+  - forma de ingresso: recolhimento, resgate, entrega voluntária, apreensão ou transferência;
+  - situação `transferido`;
+  - situação `eutanásia`, com protocolo, responsável, data e justificativa.
+- Controle sanitário:
+  - controle de ectoparasitas;
+  - consulta clínica estruturada com queixa, diagnóstico, conduta, evolução e veterinário responsável;
+  - medicamentos com dose, via, frequência, data de início e data de término;
+  - procedimentos: curativos, cirurgias, internações e outros;
+  - exames com tipo, data, resultado e anexos.
+- Adoção:
+  - campo de observações da adoção;
+  - tela/menu próprio de adoções, sem depender apenas da ficha do animal.
+- Funcionalidades adicionais:
+  - leitura de QR Code da ficha do animal;
+  - alertas automáticos para vermifugação, ectoparasitas, tratamentos, vacinas e ocupação máxima das baias.
+
 ## Recent Changes
 
 - 2026-09-25
@@ -136,6 +157,7 @@ Autenticação JWT concluída (tarefas 1–10). Gestão de baias concluída no e
 1. Implementar task 10 de gestão de animais: validação integrada, ajustes finais e atualização de contexto durável.
 2. Recuperar/alinha migrations de adoção, executar a jornada integrada de adoção → devolução → nova adoção e concluir a task 11 de adoção.
 3. Especificar demais funcionalidades do painel ADM que ainda não têm spec.
+4. Planejar e implementar os itens registrados em `Future Implementations`, priorizando prontuário sanitário estruturado, estados/desfechos do animal e dashboard/alertas.
 
 ## Things To Remember
 
