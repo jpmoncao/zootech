@@ -41,7 +41,7 @@ Responsável pelo animal depois da adoção. Herda de `Usuario` e tem endereço,
 
 ### Animal
 
-Animal acompanhado pelo CCZ: identificação, fotos, espécie/raça, características, situação, indicador clínico independente `emIsolamento`, cuidados e histórico auditável. Pode ocupar zero ou uma baia; sem baia deve ficar destacado para readequação. Nasce sem tutor; tutor entra na adoção. Situações iniciais: em tratamento, em quarentena/observação, saudável, adotado e óbito.
+Animal acompanhado pelo CCZ: identificação, fotos, espécie/raça, características, situação, indicador clínico independente `emIsolamento`, cuidados e histórico auditável. Pode ocupar zero ou uma baia; sem baia deve ficar destacado para readequação. Nasce sem tutor; tutor entra na adoção. Situações: em tratamento, em quarentena/observação, em observação antirrábica, saudável, adotado e óbito.
 
 ### Foto do animal
 
@@ -57,19 +57,47 @@ Local que abriga zero ou mais animais. Cada animal ocupa zero ou uma baia e pode
 
 ### Auditoria
 
-Registro consultável pelo ADM/Coordenação no escopo administrativo e pela ficha do domínio quando aplicável. Eventos de baias usam `AuditoriaEvento` com `dados.entidade = "baia"` e `dados.entidadeId`, cobrindo criação, edição, interdição/liberação, inativação/reativação e higienização. Eventos de animais usam `dados.entidade = "animal"` e `dados.entidadeId`, cobrindo criação, edição, observação, pesagem, evento simples, mudança de baia, foto adicionada/removida e revogação terminal.
+Registro consultável pelo ADM/Coordenação no escopo administrativo e pela ficha do domínio quando aplicável. Eventos de baias usam `AuditoriaEvento` com `dados.entidade = "baia"` e `dados.entidadeId`, cobrindo criação, edição, interdição/liberação, inativação/reativação e higienização. Eventos de animais usam `dados.entidade = "animal"` e `dados.entidadeId`, cobrindo criação, edição, observação, pesagem, evento simples, mudança de baia, foto adicionada/removida e revogação terminal. Eventos de vacinação usam `dados.entidade` em `vacina`, `protocolo_vacinal`, `aplicacao_vacina` e `agendamento_vacinacao`, cobrindo catálogo, aplicação, edição, anulação, interrupção/retomada de protocolo e as operações da agenda.
 
 ### Timeline do animal
 
-Histórico cronológico reverso em `EventoAnimal`, alimentado por criação, edição, mudança de situação, mudança de baia, observação, pesagem, exame, diagnóstico e revogação de situação terminal. Observações e pesagens também têm tabelas append-only próprias; o evento dá a visão unificada da ficha.
+Histórico cronológico reverso em `EventoAnimal`, alimentado por criação, edição, mudança de situação, mudança de baia, observação, pesagem, exame, diagnóstico, revogação de situação terminal, aplicação de vacina, reação adversa e sua atualização de desfecho, encerramento de observação antirrábica e as operações de agenda de vacinação. Observações e pesagens também têm tabelas append-only próprias; o evento dá a visão unificada da ficha.
 
 ### Prontuário
 
-Registro clínico único de um animal. Campos do diagrama: data do atendimento, anamnese, diagnóstico, prescrição, peso e temperatura. Um prontuário contém as vacinas.
+Registro clínico único de um animal. Campos do diagrama: data do atendimento, anamnese, diagnóstico, prescrição, peso e temperatura. Não existe no código ainda. No diagrama, o prontuário contém as vacinas, mas a decisão de 2026-09-25 liga a aplicação de vacina diretamente ao animal e deixa `AplicacaoVacina.prontuarioId` nulo e reservado para quando este módulo existir.
 
-### Registro de vacina
+### Vacina
 
-Aplicação de vacina ligada ao prontuário: nome, lote, data de aplicação e data da próxima dose. O caso de uso UC07 fala em vacinação antirrábica.
+Entrada do catálogo de vacinas: nome único normalizado, espécies aplicáveis (`cao` e/ou `gato`), total de doses do esquema inicial, intervalo entre doses, intervalo de revacinação, dias de aviso da próxima dose (padrão 7, configurável por vacina, 0 desliga o aviso antecipado), idade mínima opcional, indicador `obrigatoria` e estado ativa/inativa. Não controla estoque nem saldo de frascos. Somente Coordenação mantém o catálogo; vacina não é excluída, é inativada. O seed cria apenas a antirrábica; as demais a Coordenação cadastra, porque esquema vacinal é decisão clínica.
+
+### Protocolo vacinal
+
+Par animal mais vacina. Guarda a fotografia do esquema no momento da criação (doses previstas, intervalo entre doses, intervalo de revacinação), para que as doses faltantes não mudem quando o catálogo mudar. Nasce automaticamente na primeira aplicação ou no primeiro agendamento daquela vacina para aquele animal. Estados: `em_andamento`, `concluido` e `interrompido`. Doses aplicadas, doses faltantes e próxima dose são derivadas das aplicações não anuladas.
+
+### Aplicação de vacina
+
+Registro de uma dose efetivamente aplicada, ligado ao animal e ao protocolo: número da dose atribuído pelo sistema, data da aplicação como data civil, lote obrigatório em texto, validade do lote, aplicador autenticado, `aplicadoPor` textual quando outra pessoa aplicou, e data da próxima dose calculada e editável. Reserva `prontuarioId` nulo para o módulo futuro. Nunca é excluída e não tem campo estrutural editável: a correção é anulação motivada pela Coordenação mais novo registro. Marcações possíveis: registro retroativo e aplicação adiantada com motivo, conforme o termo Aplicação adiantada. O caso de uso UC07 fala em vacinação antirrábica, a única vacina `obrigatoria` e a única criada pelo seed.
+
+### Agendamento de vacinação
+
+Compromisso de vacinação na agenda: animal, vacina, protocolo, dose prevista, data e hora previstas, responsável opcional. Estados `agendado`, `aplicado`, `faltou` e `cancelado`, mais remarcação, que mantém o estado `agendado` com nova data. Existe no máximo um agendamento `agendado` por par animal e vacina. `atrasado` não é estado armazenado: é o agendamento `agendado` cuja data já passou. Dar baixa cria a aplicação e fecha o agendamento na mesma transação; anular essa aplicação reabre o agendamento.
+
+### Alertas de vacinação
+
+Nove pendências que entram na seção "Alertas e pendências" da ficha do animal e no contador de alertas da listagem, sem mecanismo paralelo: sem vacinação registrada, esquema vacinal incompleto (com doses aplicadas sobre previstas e faltantes), dose vencida, dose a vencer dentro da janela daquela vacina, vacina obrigatória pendente, protocolo interrompido, observação antirrábica em curso (dias que faltam), observação antirrábica vencida (pede a observação final) e reação adversa em acompanhamento. Animal em situação terminal não gera nenhum deles. Regras em `.ai-context/specs/gestao-de-vacinacao.md`.
+
+### Aplicação adiantada
+
+Aplicação registrada antes da data mínima da próxima dose do protocolo. Não é recusada e reenviada: a interface avisa antes do envio, com a data da última dose, o intervalo previsto e a data a partir da qual a dose seria regular; a pessoa marca confirmação explícita e informa motivo. A aplicação fica marcada com o motivo, o autor e os dias de antecipação, na ficha, no evento e na auditoria, e essa marcação não é editável. A API recusa com 409 quando recebe aplicação adiantada sem confirmação e motivo. Confirmam veterinário e Coordenação.
+
+### Reação adversa pós-vacinal
+
+Evento da ficha do animal, no mesmo mecanismo de exame e diagnóstico, com tipo `reacao_adversa` e referência opcional à `AplicacaoVacina` que a originou. Guarda gravidade obrigatória (`leve`, `moderada`, `grave`) e desfecho obrigatório (`em acompanhamento`, `resolvida`, `resolvida com sequela`, `óbito`), começando em `em acompanhamento`. Como o evento é imutável, atualizar o desfecho é criar novo evento que referencia o original por `EventoAnimal.eventoOrigemId`; o desfecho corrente é o do evento mais recente da cadeia. Registrável por todos os perfis autenticados. Não muda situação, não interrompe protocolo e não anula a aplicação — desfecho `óbito` na reação não mexe na situação do animal. Anular a aplicação não apaga a reação. Enquanto o desfecho corrente for `em acompanhamento`, gera alerta; e nova aplicação da mesma vacina naquele animal mostra aviso antes do envio, nunca bloqueio.
+
+### Observação antirrábica
+
+Situação do animal (`em_observacao_antirrabica`), distinta de `em_quarentena_observacao` e coexistindo com ela. `Animal.observacaoAntirrabicaInicioEm` grava o instante de entrada e é limpo na saída; recolocar o animal reinicia a contagem e o histórico guarda os períodos anteriores. O período é de 10 dias corridos fixos, não configuráveis. Durante os 10 dias, o alerta é informativo e mostra quantos dias faltam mais a data de encerramento. Ao vencer, vira pendência de ação e passa a pedir a observação final; a ação abre `Encerrar observação antirrábica`, que exige observação final em texto e nova situação, e grava as duas com eventos e auditoria em uma transação, via `POST /animais/:id/encerrar-observacao-antirrabica`. Encerrar antes dos 10 dias usa o mesmo caminho e fica marcado como antecipado. Nenhuma situação do animal bloqueia vacinar, inclusive com a antirrábica.
 
 ### Castração
 

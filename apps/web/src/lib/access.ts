@@ -21,7 +21,7 @@ const sectionRoles: Record<string, readonly PerfilAcesso[]> = {
   painel: todos,
   animais: todos,
   baias: todos,
-  vacinacao: clinico,
+  vacinacao: todos,
   castracoes: todos,
   adocoes: funcionario,
   observacao: clinico,
@@ -43,6 +43,32 @@ export function canManageBaias(perfil: PerfilAcesso): boolean {
 
 export function canViewBaiasAudit(perfil: PerfilAcesso): boolean {
   return perfil === "coordenacao";
+}
+
+// Todos os perfis autenticados consultam vacinação: catálogo, ficha e agenda.
+export function canViewVacinacao(perfil: PerfilAcesso): boolean {
+  return todos.includes(perfil);
+}
+
+// Registrar aplicação, operar agenda e interromper/retomar protocolo é clínico.
+export function canManageVacinacao(perfil: PerfilAcesso): boolean {
+  return clinico.includes(perfil);
+}
+
+// O catálogo de vacinas é administrativo: só a Coordenação mantém.
+export function canManageCatalogoVacinas(perfil: PerfilAcesso): boolean {
+  return perfil === "coordenacao";
+}
+
+// Anular aplicação corrige o histórico e fica só com a Coordenação.
+export function canAnularAplicacaoVacina(perfil: PerfilAcesso): boolean {
+  return perfil === "coordenacao";
+}
+
+// Reação adversa e mudança de situação seguem a regra de eventos de animais,
+// não a regra clínica: quem percebe a reação no canil costuma ser o agente.
+export function canRegistrarReacaoAdversa(perfil: PerfilAcesso): boolean {
+  return todos.includes(perfil);
 }
 
 export function canViewAnimais(perfil: PerfilAcesso): boolean {

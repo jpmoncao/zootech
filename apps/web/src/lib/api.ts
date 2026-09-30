@@ -1,5 +1,3 @@
-import { LucideIcon } from "lucide-react";
-
 export type PerfilAcesso = "coordenacao" | "veterinario" | "agente" | "recepcao";
 
 export type PublicUser = {
@@ -94,7 +92,13 @@ export type EspecieAnimal = "cao" | "gato";
 export type TipoRacaAnimal = "catalogo" | "srd" | "outra" | "nao_informada" | "personalizada";
 export type SexoAnimal = "macho" | "femea" | "nao_informado";
 export type PorteAnimal = "pequeno" | "medio" | "grande" | "nao_informado";
-export type SituacaoAnimal = "em_tratamento" | "em_quarentena_observacao" | "saudavel" | "adotado" | "obito";
+export type SituacaoAnimal =
+  | "em_tratamento"
+  | "em_quarentena_observacao"
+  | "em_observacao_antirrabica"
+  | "saudavel"
+  | "adotado"
+  | "obito";
 export type StatusCastracaoAnimal = "sim" | "nao" | "nao_informado";
 export type UnidadeIdadeAnimal = "dias" | "meses" | "anos";
 export type TipoEventoAnimal =
@@ -108,7 +112,19 @@ export type TipoEventoAnimal =
   | "foto"
   | "exame"
   | "diagnostico"
-  | "revogacao_situacao_terminal";
+  | "revogacao_situacao_terminal"
+  | "aplicacao_vacina"
+  | "edicao_aplicacao_vacina"
+  | "anulacao_aplicacao_vacina"
+  | "interrupcao_protocolo_vacinal"
+  | "retomada_protocolo_vacinal"
+  | "criacao_agendamento_vacina"
+  | "remarcacao_agendamento_vacina"
+  | "cancelamento_agendamento_vacina"
+  | "falta_agendamento_vacina"
+  | "reabertura_agendamento_vacina"
+  | "reacao_adversa"
+  | "encerramento_observacao_antirrabica";
 
 export type RacaAnimal = {
   id: number;
@@ -205,6 +221,10 @@ export type Animal = {
   pesagens?: PesagemAnimal[];
   observacoes?: ObservacaoAnimal[];
   eventos?: EventoAnimal[];
+  /** Só na ficha: reações com o desfecho corrente derivado da cadeia. */
+  reacoesAdversas?: ReacaoAdversa[];
+  /** Só na ficha, e só enquanto a situação é `em_observacao_antirrabica`. */
+  observacaoAntirrabica?: ObservacaoAntirrabica | null;
 };
 
 export type ListarAnimaisFiltros = {
@@ -290,7 +310,7 @@ export type AlocarAnimalInput = {
 };
 
 export type RevogarSituacaoAnimalInput = {
-  situacao: Extract<SituacaoAnimal, "em_tratamento" | "em_quarentena_observacao" | "saudavel">;
+  situacao: Extract<SituacaoAnimal, "em_tratamento" | "em_quarentena_observacao" | "em_observacao_antirrabica" | "saudavel">;
   motivo: string;
 };
 
@@ -326,10 +346,17 @@ export type SolicitacaoPendente = {
 
 export class ApiError extends Error {
   readonly status: number;
+  /** Código estável das recusas de domínio (409). A interface decide por ele, não pelo texto. */
+  readonly codigo: string | null;
+  /** Campos extras da recusa, como `dataMinimaProximaDose` e `diasAntecipacao`. */
+  readonly dados: Record<string, unknown>;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, payload?: unknown) {
     super(message);
     this.status = status;
+    const corpo = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
+    this.codigo = typeof corpo.codigo === "string" ? corpo.codigo : null;
+    this.dados = corpo;
   }
 }
 
@@ -586,6 +613,422 @@ export function revogarSituacaoAnimal(id: number, input: RevogarSituacaoAnimalIn
   });
 }
 
+/* Vacinação: catálogo, protocolos, aplicações e agenda. */
+
+export type GravidadeReacaoAdversa = "leve" | "moderada" | "grave";
+export type DesfechoReacaoAdversa = "em_acompanhamento" | "resolvida" | "resolvida_com_sequela" | "obito";
+export type StatusProtocoloVacinal = "em_andamento" | "concluido" | "interrompido";
+export type StatusAgendamentoVacinacao = "agendado" | "aplicado" | "faltou" | "cancelado";
+
+export type Vacina = {
+  id: number;
+  nome: string;
+  nomeNormalizado: string;
+  especies: EspecieAnimal[];
+  totalDoses: number;
+  intervaloDosesDias: number | null;
+  revacinacaoDias: number | null;
+  /** Antecedência do alerta "dose a vencer". 0 desliga o aviso antecipado desta vacina. */
+  diasAvisoProximaDose: number;
+  idadeMinimaSemanas: number | null;
+  fabricante: string | null;
+  viaAplicacaoSugerida: string | null;
+  obrigatoria: boolean;
+  observacoes: string | null;
+  ativa: boolean;
+  createdAt: string;
+  updatedAt: string;
+  /** Só no detalhe e na edição: protocolos que seguem com o esquema anterior. */
+  protocolosEmAndamento?: number;
+  protocolosComEsquemaAnterior?: number;
+};
+
+export type AplicacaoVacina = {
+  id: number;
+  animalId: number;
+  vacinaId: number;
+  protocoloId: number;
+  numeroDose: number;
+  /** Data civil (AAAA-MM-DD), sem hora. */
+  dataAplicacao: string;
+  lote: string;
+  validadeLote: string | null;
+  viaAplicacao: string | null;
+  observacao: string | null;
+  aplicadoPor: string | null;
+  registradoPor: Pick<PublicUser, "id" | "nome"> | null;
+  registroRetroativo: boolean;
+  aplicadaAdiantada: boolean;
+  motivoAdiantada: string | null;
+  diasAntecipacao: number | null;
+  dataProximaDose: string | null;
+  dataProximaDoseCalculada: string | null;
+  prontuarioId: number | null;
+  anulada: boolean;
+  anuladaEm: string | null;
+  anuladaPor: Pick<PublicUser, "id" | "nome"> | null;
+  motivoAnulacao: string | null;
+  agendamentoId: number | null;
+  createdAt: string;
+};
+
+export type ProtocoloVacinal = {
+  id: number;
+  animalId: number;
+  vacinaId: number;
+  vacina: Pick<Vacina, "id" | "nome" | "especies" | "ativa" | "obrigatoria" | "idadeMinimaSemanas">;
+  status: StatusProtocoloVacinal;
+  dosesPrevistas: number;
+  dosesAplicadas: number;
+  dosesFaltantes: number;
+  proximoNumeroDose: number;
+  intervaloDosesDias: number | null;
+  revacinacaoDias: number | null;
+  diasAvisoProximaDose: number;
+  dataUltimaAplicacao: string | null;
+  /** Data a partir da qual a próxima dose é regular. É o que permite avisar antes do envio. */
+  dataMinimaProximaDose: string | null;
+  dataProximaDose: string | null;
+  motivoInterrupcao: string | null;
+  interrompidoEm: string | null;
+  interrompidoPor: Pick<PublicUser, "id" | "nome"> | null;
+  aplicacoes: AplicacaoVacina[];
+  agendamentoEmAberto: {
+    id: number;
+    numeroDosePrevista: number;
+    dataHoraPrevista: string;
+    responsavel: Pick<PublicUser, "id" | "nome"> | null;
+  } | null;
+};
+
+export type VacinacaoDoAnimal = {
+  animalId: number;
+  situacao: SituacaoAnimal;
+  somenteLeitura: boolean;
+  protocolos: ProtocoloVacinal[];
+};
+
+export type AvisoAplicacao = { codigo: string; message: string } & Record<string, unknown>;
+
+export type RegistroAplicacaoResultado = {
+  aplicacao: AplicacaoVacina;
+  protocolo: ProtocoloVacinal;
+  avisos: AvisoAplicacao[];
+};
+
+export type ReacaoAdversa = {
+  id: number;
+  registradoEm: string;
+  registradoPor: Pick<PublicUser, "id" | "nome"> | null;
+  resumo: string;
+  aplicacaoVacinaId: number | null;
+  gravidade: GravidadeReacaoAdversa;
+  desfecho: DesfechoReacaoAdversa;
+  emAcompanhamento: boolean;
+  atualizacoes: {
+    id: number;
+    registradoEm: string;
+    registradoPor: Pick<PublicUser, "id" | "nome"> | null;
+    resumo: string;
+    gravidade: GravidadeReacaoAdversa;
+    desfecho: DesfechoReacaoAdversa;
+  }[];
+};
+
+export type ObservacaoAntirrabica = {
+  inicioEm: string;
+  periodoDias: number;
+  diasDecorridos: number;
+  diasRestantes: number;
+  encerraEm: string;
+  vencida: boolean;
+};
+
+export type CriarVacinaInput = {
+  nome: string;
+  especies: EspecieAnimal[];
+  totalDoses: number;
+  intervaloDosesDias?: number | null;
+  revacinacaoDias?: number | null;
+  diasAvisoProximaDose?: number;
+  idadeMinimaSemanas?: number | null;
+  fabricante?: string | null;
+  viaAplicacaoSugerida?: string | null;
+  obrigatoria?: boolean;
+  observacoes?: string | null;
+};
+
+export type AtualizarVacinaInput = Partial<CriarVacinaInput>;
+
+export type RegistrarAplicacaoInput = {
+  vacinaId: number;
+  dataAplicacao: string;
+  lote: string;
+  validadeLote?: string | null;
+  viaAplicacao?: string | null;
+  observacao?: string | null;
+  aplicadoPor?: string | null;
+  registroRetroativo?: boolean;
+  /** Confirmação explícita de dose adiantada. Sem ela e sem motivo, a API recusa com 409. */
+  confirmaAdiantada?: boolean;
+  motivoAdiantada?: string;
+  dataProximaDose?: string | null;
+  /** Dose que a tela mostrou. A API recusa se ela mudou no meio-tempo. */
+  numeroDoseEsperada?: number;
+};
+
+export type EditarAplicacaoInput = {
+  lote?: string;
+  validadeLote?: string | null;
+  viaAplicacao?: string | null;
+  observacao?: string | null;
+  aplicadoPor?: string | null;
+  dataProximaDose?: string | null;
+};
+
+export type RegistrarReacaoAdversaInput = {
+  resumo: string;
+  gravidadeReacao: GravidadeReacaoAdversa;
+  desfechoReacao: DesfechoReacaoAdversa;
+  aplicacaoVacinaId?: number;
+  /** Atualização de desfecho: aponta para a reação já registrada. */
+  eventoOrigemId?: number;
+};
+
+export type EncerrarObservacaoAntirrabicaInput = {
+  observacaoFinal: string;
+  situacao: Extract<SituacaoAnimal, "em_tratamento" | "em_quarentena_observacao" | "saudavel" | "obito">;
+};
+
+export function listarVacinas(filtros: { busca?: string; especie?: EspecieAnimal; ativa?: boolean } = {}): Promise<Vacina[]> {
+  const params = new URLSearchParams();
+  if (filtros.busca?.trim()) params.set("busca", filtros.busca.trim());
+  if (filtros.especie) params.set("especie", filtros.especie);
+  if (filtros.ativa !== undefined) params.set("ativa", String(filtros.ativa));
+  const query = params.toString();
+  return request<Vacina[]>(`/vacinas${query ? `?${query}` : ""}`, { method: "GET" });
+}
+
+export function obterVacina(id: number): Promise<Vacina> {
+  return request<Vacina>(`/vacinas/${id}`, { method: "GET" });
+}
+
+export function criarVacina(input: CriarVacinaInput): Promise<Vacina> {
+  return request<Vacina>("/vacinas", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function atualizarVacina(id: number, input: AtualizarVacinaInput): Promise<Vacina> {
+  return request<Vacina>(`/vacinas/${id}`, { method: "PATCH", body: JSON.stringify(input) });
+}
+
+export function inativarVacina(id: number): Promise<Vacina> {
+  return request<Vacina>(`/vacinas/${id}/inativar`, { method: "POST" });
+}
+
+export function reativarVacina(id: number): Promise<Vacina> {
+  return request<Vacina>(`/vacinas/${id}/reativar`, { method: "POST" });
+}
+
+export function obterVacinacaoDoAnimal(animalId: number): Promise<VacinacaoDoAnimal> {
+  return request<VacinacaoDoAnimal>(`/animais/${animalId}/vacinacao`, { method: "GET" });
+}
+
+export function registrarAplicacaoVacina(
+  animalId: number,
+  input: RegistrarAplicacaoInput,
+): Promise<RegistroAplicacaoResultado> {
+  return request<RegistroAplicacaoResultado>(`/animais/${animalId}/vacinacao/aplicacoes`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function editarAplicacaoVacina(
+  animalId: number,
+  aplicacaoId: number,
+  input: EditarAplicacaoInput,
+): Promise<{ aplicacao: AplicacaoVacina; protocolo: ProtocoloVacinal }> {
+  return request(`/animais/${animalId}/vacinacao/aplicacoes/${aplicacaoId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function anularAplicacaoVacina(
+  animalId: number,
+  aplicacaoId: number,
+  motivo: string,
+): Promise<{ aplicacao: AplicacaoVacina; protocolo: ProtocoloVacinal; agendamentoReaberto: boolean }> {
+  return request(`/animais/${animalId}/vacinacao/aplicacoes/${aplicacaoId}/anular`, {
+    method: "POST",
+    body: JSON.stringify({ motivo }),
+  });
+}
+
+export function interromperProtocoloVacinal(
+  animalId: number,
+  protocoloId: number,
+  motivo: string,
+): Promise<ProtocoloVacinal> {
+  return request<ProtocoloVacinal>(`/animais/${animalId}/vacinacao/protocolos/${protocoloId}/interromper`, {
+    method: "POST",
+    body: JSON.stringify({ motivo }),
+  });
+}
+
+export function retomarProtocoloVacinal(animalId: number, protocoloId: number): Promise<ProtocoloVacinal> {
+  return request<ProtocoloVacinal>(`/animais/${animalId}/vacinacao/protocolos/${protocoloId}/retomar`, {
+    method: "POST",
+  });
+}
+
+export function registrarReacaoAdversa(animalId: number, input: RegistrarReacaoAdversaInput): Promise<EventoAnimal> {
+  return request<EventoAnimal>(`/animais/${animalId}/eventos`, {
+    method: "POST",
+    body: JSON.stringify({ tipo: "reacao_adversa", ...input }),
+  });
+}
+
+export function encerrarObservacaoAntirrabica(
+  animalId: number,
+  input: EncerrarObservacaoAntirrabicaInput,
+): Promise<Animal> {
+  return request<Animal>(`/animais/${animalId}/encerrar-observacao-antirrabica`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export type AgendamentoVacinacao = {
+  id: number;
+  animalId: number;
+  animal: Pick<Animal, "id" | "nome" | "numeroRegistro" | "especie" | "situacao">;
+  vacinaId: number;
+  vacina: Pick<Vacina, "id" | "nome" | "ativa">;
+  protocoloId: number;
+  dosesPrevistas: number;
+  numeroDosePrevista: number;
+  dataHoraPrevista: string;
+  responsavel: Pick<PublicUser, "id" | "nome"> | null;
+  criadoPor: Pick<PublicUser, "id" | "nome"> | null;
+  observacao: string | null;
+  status: StatusAgendamentoVacinacao;
+  /** Derivado: agendado cuja data e hora já passaram. Não é estado armazenado. */
+  atrasado: boolean;
+  motivoCancelamento: string | null;
+  aplicacao: { id: number; numeroDose: number; dataAplicacao: string; anuladaEm: string | null } | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ListarAgendaFiltros = {
+  busca?: string;
+  de?: string;
+  ate?: string;
+  vacinaId?: number;
+  especie?: EspecieAnimal;
+  responsavelId?: number;
+  status?: StatusAgendamentoVacinacao;
+  atrasados?: boolean;
+  incluirTerminais?: boolean;
+  pagina?: number;
+  limite?: number;
+};
+
+export type ListaAgenda = {
+  total: number;
+  /** Quantos itens do filtro atual estão atrasados, mesmo fora da página. */
+  atrasados: number;
+  pagina: number;
+  limite: number;
+  items: AgendamentoVacinacao[];
+};
+
+export type CriarAgendamentoInput = {
+  animalId: number;
+  vacinaId: number;
+  dataHoraPrevista: string;
+  responsavelId?: number | null;
+  observacao?: string | null;
+};
+
+export type RemarcarAgendamentoInput = {
+  dataHoraPrevista: string;
+  responsavelId?: number | null;
+  observacao?: string | null;
+  motivo?: string;
+};
+
+export type BaixarAgendamentoInput = {
+  dataAplicacao: string;
+  lote: string;
+  validadeLote?: string | null;
+  viaAplicacao?: string | null;
+  observacao?: string | null;
+  aplicadoPor?: string | null;
+  registroRetroativo?: boolean;
+  confirmaAdiantada?: boolean;
+  motivoAdiantada?: string;
+  dataProximaDose?: string | null;
+};
+
+export function listarAgenda(filtros: ListarAgendaFiltros = {}): Promise<ListaAgenda> {
+  const params = new URLSearchParams();
+  if (filtros.busca?.trim()) params.set("busca", filtros.busca.trim());
+  if (filtros.de) params.set("de", filtros.de);
+  if (filtros.ate) params.set("ate", filtros.ate);
+  if (filtros.vacinaId) params.set("vacinaId", String(filtros.vacinaId));
+  if (filtros.especie) params.set("especie", filtros.especie);
+  if (filtros.responsavelId) params.set("responsavelId", String(filtros.responsavelId));
+  if (filtros.status) params.set("status", filtros.status);
+  if (filtros.atrasados) params.set("atrasados", "true");
+  if (filtros.incluirTerminais) params.set("incluirTerminais", "true");
+  if (filtros.pagina) params.set("pagina", String(filtros.pagina));
+  if (filtros.limite) params.set("limite", String(filtros.limite));
+  const query = params.toString();
+  return request<ListaAgenda>(`/vacinacao/agenda${query ? `?${query}` : ""}`, { method: "GET" });
+}
+
+export function obterAgendamento(id: number): Promise<AgendamentoVacinacao> {
+  return request<AgendamentoVacinacao>(`/vacinacao/agendamentos/${id}`, { method: "GET" });
+}
+
+export function criarAgendamento(
+  input: CriarAgendamentoInput,
+): Promise<{ agendamento: AgendamentoVacinacao; avisos: AvisoAplicacao[] }> {
+  return request(`/vacinacao/agendamentos`, { method: "POST", body: JSON.stringify(input) });
+}
+
+export function remarcarAgendamento(id: number, input: RemarcarAgendamentoInput): Promise<AgendamentoVacinacao> {
+  return request<AgendamentoVacinacao>(`/vacinacao/agendamentos/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function cancelarAgendamento(id: number, motivo: string): Promise<AgendamentoVacinacao> {
+  return request<AgendamentoVacinacao>(`/vacinacao/agendamentos/${id}/cancelar`, {
+    method: "POST",
+    body: JSON.stringify({ motivo }),
+  });
+}
+
+export function marcarFaltaAgendamento(id: number): Promise<AgendamentoVacinacao> {
+  return request<AgendamentoVacinacao>(`/vacinacao/agendamentos/${id}/falta`, { method: "POST" });
+}
+
+export function baixarAgendamento(
+  id: number,
+  input: BaixarAgendamentoInput,
+): Promise<{
+  agendamento: AgendamentoVacinacao;
+  aplicacao: AplicacaoVacina;
+  protocolo: ProtocoloVacinal;
+  avisos: AvisoAplicacao[];
+}> {
+  return request(`/vacinacao/agendamentos/${id}/baixa`, { method: "POST", body: JSON.stringify(input) });
+}
+
 export function animalFotoUrl(foto: Pick<FotoAnimal, "url">): string {
   return `${API_URL}${foto.url}`;
 }
@@ -691,10 +1134,10 @@ async function request<T>(
       return request<T>(path, init, { ...options, retried: true });
     }
     leaveToLogin();
-    throw new ApiError(messageFrom(payload), 401);
+    throw new ApiError(messageFrom(payload), 401, payload);
   }
   if (!response.ok) {
-    throw new ApiError(messageFrom(payload), response.status);
+    throw new ApiError(messageFrom(payload), response.status, payload);
   }
   return payload as T;
 }
@@ -712,7 +1155,7 @@ async function requestBlob(
   }
   if (!response.ok) {
     const payload: unknown = await response.json().catch(() => null);
-    throw new ApiError(messageFrom(payload), response.status);
+    throw new ApiError(messageFrom(payload), response.status, payload);
   }
   return response.blob();
 }

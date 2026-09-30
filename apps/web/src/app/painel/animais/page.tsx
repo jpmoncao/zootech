@@ -66,7 +66,7 @@ import { opcoesRaca, racaFormValue } from "@/lib/raca-options";
 const especies: EspecieAnimal[] = ["cao", "gato"];
 const sexos: SexoAnimal[] = ["macho", "femea", "nao_informado"];
 const portes: PorteAnimal[] = ["pequeno", "medio", "grande", "nao_informado"];
-const situacoes: SituacaoAnimal[] = ["em_tratamento", "em_quarentena_observacao", "saudavel", "adotado", "obito"];
+const situacoes: SituacaoAnimal[] = ["em_tratamento", "em_quarentena_observacao", "em_observacao_antirrabica", "saudavel", "adotado", "obito"];
 const castracoes: StatusCastracaoAnimal[] = ["sim", "nao", "nao_informado"];
 const unidadesIdade: UnidadeIdadeAnimal[] = ["dias", "meses", "anos"];
 
@@ -91,6 +91,7 @@ const porteLabel: Record<PorteAnimal, string> = {
 const situacaoLabel: Record<SituacaoAnimal, string> = {
   em_tratamento: "Em tratamento",
   em_quarentena_observacao: "Quarentena/observação",
+  em_observacao_antirrabica: "Observação antirrábica",
   saudavel: "Saudável",
   adotado: "Adotado",
   obito: "Óbito",
@@ -531,7 +532,7 @@ function AnimalRow({ animal, podeEditar, onEdit }: { animal: Animal; podeEditar:
             {animal.raca?.nome ?? "Raça não informada"} · {especieLabel[animal.especie]} · {sexoLabel[animal.sexo]}
           </span>
         </span>
-        <span className="[min-height:28px] [border-radius:999px] [padding:6px_10px] [display:inline-flex] [align-items:center] [justify-content:center] [width:fit-content] [font:700_12px/1_var(--body)] [white-space:nowrap] data-[estado=ativa]:[background:var(--ok-50)] data-[estado=ativa]:[color:var(--ok)] data-[estado=em\_higienizacao]:[background:var(--info-50)] data-[estado=em\_higienizacao]:[color:var(--info)] data-[estado=interditada]:[background:var(--crit-50)] data-[estado=interditada]:[color:var(--crit)] data-[estado=inativa]:[background:var(--bg)] data-[estado=inativa]:[color:var(--muted)] data-[estado=inativa]:[border:1px_solid_var(--line)] data-[estado=em\_tratamento]:[background:var(--info-50)] data-[estado=em\_tratamento]:[color:var(--info)] data-[estado=em\_quarentena\_observacao]:[background:var(--info-50)] data-[estado=em\_quarentena\_observacao]:[color:var(--info)] data-[estado=saudavel]:[background:var(--ok-50)] data-[estado=saudavel]:[color:var(--ok)] data-[estado=adotado]:[background:var(--primary-50)] data-[estado=adotado]:[color:var(--primary-700)] data-[estado=obito]:[background:var(--bg)] data-[estado=obito]:[color:var(--muted)] data-[estado=obito]:[border:1px_solid_var(--line)] max-[760px]:[grid-column:2] max-[760px]:[align-items:flex-start] max-[760px]:[text-align:left]" data-estado={animal.situacao}>
+        <span className="[min-height:28px] [border-radius:999px] [padding:6px_10px] [display:inline-flex] [align-items:center] [justify-content:center] [width:fit-content] [font:700_12px/1_var(--body)] [white-space:nowrap] data-[estado=ativa]:[background:var(--ok-50)] data-[estado=ativa]:[color:var(--ok)] data-[estado=em\_higienizacao]:[background:var(--info-50)] data-[estado=em\_higienizacao]:[color:var(--info)] data-[estado=interditada]:[background:var(--crit-50)] data-[estado=interditada]:[color:var(--crit)] data-[estado=inativa]:[background:var(--bg)] data-[estado=inativa]:[color:var(--muted)] data-[estado=inativa]:[border:1px_solid_var(--line)] data-[estado=em\_tratamento]:[background:var(--info-50)] data-[estado=em\_tratamento]:[color:var(--info)] data-[estado=em\_quarentena\_observacao]:[background:var(--info-50)] data-[estado=em\_quarentena\_observacao]:[color:var(--info)] data-[estado=em\_observacao\_antirrabica]:[background:var(--warn-50)] data-[estado=em\_observacao\_antirrabica]:[color:var(--warn)] data-[estado=saudavel]:[background:var(--ok-50)] data-[estado=saudavel]:[color:var(--ok)] data-[estado=adotado]:[background:var(--primary-50)] data-[estado=adotado]:[color:var(--primary-700)] data-[estado=obito]:[background:var(--bg)] data-[estado=obito]:[color:var(--muted)] data-[estado=obito]:[border:1px_solid_var(--line)] max-[760px]:[grid-column:2] max-[760px]:[align-items:flex-start] max-[760px]:[text-align:left]" data-estado={animal.situacao}>
           {situacaoLabel[animal.situacao]}
         </span>
         <span className="[&_small]:[color:var(--muted)] [&_small]:[font-size:13px] [display:flex] [flex-direction:column] [align-items:flex-end] [gap:2px] [text-align:right] [&_b]:[font-family:var(--mono)] [&_b]:[font-size:13px] max-[760px]:[grid-column:2] max-[760px]:[align-items:flex-start] max-[760px]:[text-align:left]">

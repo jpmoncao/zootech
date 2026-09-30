@@ -22,10 +22,8 @@ import {
   Loader2,
   LucideIcon,
   MapPin,
-  MapPinIcon,
   MapPinPenIcon,
   MessageCircleIcon,
-  PencilIcon,
   Plus,
   PlusCircleIcon,
   RefreshCw,
@@ -35,6 +33,7 @@ import {
   Scale,
   ScaleIcon,
   Stethoscope,
+  Syringe,
   Trash2,
 } from "lucide-react";
 import { Combobox } from "@/components/combobox";
@@ -50,7 +49,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Shell } from "@/components/shell";
-import { canManageAnimais } from "@/lib/access";
+import {
+  canAnularAplicacaoVacina,
+  canManageAnimais,
+  canManageVacinacao,
+  canRegistrarReacaoAdversa,
+} from "@/lib/access";
+import { SecaoVacinacao } from "@/components/vacinacao/secao-vacinacao";
+import { idadeEmSemanas } from "@/components/vacinacao/comum";
+import { DialogoEncerrarObservacao } from "@/components/vacinacao/dialogo-encerrar-observacao";
 import { opcoesRaca, racaFormValue } from "@/lib/raca-options";
 import {
   adicionarFotoAnimal,
@@ -91,6 +98,7 @@ const especieLabel: Record<EspecieAnimal, string> = {
 const situacaoLabel: Record<SituacaoAnimal, string> = {
   em_tratamento: "Em tratamento",
   em_quarentena_observacao: "Quarentena/observação",
+  em_observacao_antirrabica: "Observação antirrábica",
   saudavel: "Saudável",
   adotado: "Adotado",
   obito: "Óbito",
@@ -133,6 +141,18 @@ const eventoLabel: Record<TipoEventoAnimal, string> = {
   exame: "Exame",
   diagnostico: "Diagnóstico",
   revogacao_situacao_terminal: "Revogação de estado terminal",
+  aplicacao_vacina: "Vacina aplicada",
+  edicao_aplicacao_vacina: "Aplicação editada",
+  anulacao_aplicacao_vacina: "Aplicação anulada",
+  interrupcao_protocolo_vacinal: "Protocolo interrompido",
+  retomada_protocolo_vacinal: "Protocolo retomado",
+  criacao_agendamento_vacina: "Vacinação agendada",
+  remarcacao_agendamento_vacina: "Agendamento remarcado",
+  cancelamento_agendamento_vacina: "Agendamento cancelado",
+  falta_agendamento_vacina: "Falta no agendamento",
+  reabertura_agendamento_vacina: "Agendamento reaberto",
+  reacao_adversa: "Reação adversa",
+  encerramento_observacao_antirrabica: "Observação antirrábica encerrada",
 };
 
 type FormFicha = {
@@ -179,6 +199,9 @@ function FichaAnimal() {
   const perfil = getCurrentUser()?.perfilAcesso ?? null;
   const podeEditar = Boolean(perfil && canManageAnimais(perfil));
   const podeRevogar = perfil === "coordenacao";
+  const podeOperarVacinacao = Boolean(perfil && canManageVacinacao(perfil));
+  const podeAnularAplicacao = Boolean(perfil && canAnularAplicacaoVacina(perfil));
+  const podeRegistrarReacao = Boolean(perfil && canRegistrarReacaoAdversa(perfil));
 
   useEffect(() => {
     if (id == null) return;
@@ -298,6 +321,9 @@ function FichaAnimal() {
           baias={baias}
           podeEditar={podeEditar && !animal.somenteLeitura}
           podeRevogar={podeRevogar}
+          podeOperarVacinacao={podeOperarVacinacao}
+          podeAnularAplicacao={podeAnularAplicacao}
+          podeRegistrarReacao={podeRegistrarReacao}
           onChanged={reloadAfterChange}
           onDirtyChange={setDirty}
         />
@@ -320,6 +346,9 @@ function Ficha({
   baias,
   podeEditar,
   podeRevogar,
+  podeOperarVacinacao,
+  podeAnularAplicacao,
+  podeRegistrarReacao,
   onChanged,
   onDirtyChange,
 }: {
@@ -327,12 +356,17 @@ function Ficha({
   baias: Baia[];
   podeEditar: boolean;
   podeRevogar: boolean;
+  podeOperarVacinacao: boolean;
+  podeAnularAplicacao: boolean;
+  podeRegistrarReacao: boolean;
   onChanged: () => Promise<void>;
   onDirtyChange: (dirty: boolean) => void;
 }) {
   const foto = animal.fotos.find((item) => item.identificacao) ?? animal.fotos[0];
   const Icon = animal.especie === "cao" ? Dog : Cat;
   const pesoMaisRecente = animal.pesagens?.[0];
+  const [encerrarObservacaoAberto, setEncerrarObservacaoAberto] = useState(false);
+  const observacaoAntirrabica = animal.observacaoAntirrabica ?? null;
 
   return (
     <div className="[display:grid] [grid-template-columns:minmax(0,_1fr)_minmax(300px,_0.42fr)] [align-items:start] [gap:16px] max-[760px]:[grid-template-columns:1fr]">
@@ -343,10 +377,10 @@ function Ficha({
           </div>
           <div className="[min-width:0] [&_p]:[margin:0] [&_p]:[color:var(--muted)]">
             <div className="[display:flex] [align-items:center] [gap:8px] [flex-wrap:wrap]">
-              <span className="[min-height:28px] [border-radius:999px] [padding:6px_10px] [display:inline-flex] [align-items:center] [justify-content:center] [width:fit-content] [font:700_12px/1_var(--body)] [white-space:nowrap] data-[estado=ativa]:[background:var(--ok-50)] data-[estado=ativa]:[color:var(--ok)] data-[estado=em\_higienizacao]:[background:var(--info-50)] data-[estado=em\_higienizacao]:[color:var(--info)] data-[estado=interditada]:[background:var(--crit-50)] data-[estado=interditada]:[color:var(--crit)] data-[estado=inativa]:[background:var(--bg)] data-[estado=inativa]:[color:var(--muted)] data-[estado=inativa]:[border:1px_solid_var(--line)] data-[estado=em\_tratamento]:[background:var(--info-50)] data-[estado=em\_tratamento]:[color:var(--info)] data-[estado=em\_quarentena\_observacao]:[background:var(--info-50)] data-[estado=em\_quarentena\_observacao]:[color:var(--info)] data-[estado=saudavel]:[background:var(--ok-50)] data-[estado=saudavel]:[color:var(--ok)] data-[estado=adotado]:[background:var(--primary-50)] data-[estado=adotado]:[color:var(--primary-700)] data-[estado=obito]:[background:var(--bg)] data-[estado=obito]:[color:var(--muted)] data-[estado=obito]:[border:1px_solid_var(--line)] max-[760px]:[grid-column:2] max-[760px]:[align-items:flex-start] max-[760px]:[text-align:left]" data-estado={animal.situacao}>
+              <span className="[min-height:28px] [border-radius:999px] [padding:6px_10px] [display:inline-flex] [align-items:center] [justify-content:center] [width:fit-content] [font:700_12px/1_var(--body)] [white-space:nowrap] data-[estado=ativa]:[background:var(--ok-50)] data-[estado=ativa]:[color:var(--ok)] data-[estado=em\_higienizacao]:[background:var(--info-50)] data-[estado=em\_higienizacao]:[color:var(--info)] data-[estado=interditada]:[background:var(--crit-50)] data-[estado=interditada]:[color:var(--crit)] data-[estado=inativa]:[background:var(--bg)] data-[estado=inativa]:[color:var(--muted)] data-[estado=inativa]:[border:1px_solid_var(--line)] data-[estado=em\_tratamento]:[background:var(--info-50)] data-[estado=em\_tratamento]:[color:var(--info)] data-[estado=em\_quarentena\_observacao]:[background:var(--info-50)] data-[estado=em\_quarentena\_observacao]:[color:var(--info)] data-[estado=em\_observacao\_antirrabica]:[background:var(--warn-50)] data-[estado=em\_observacao\_antirrabica]:[color:var(--warn)] data-[estado=saudavel]:[background:var(--ok-50)] data-[estado=saudavel]:[color:var(--ok)] data-[estado=adotado]:[background:var(--primary-50)] data-[estado=adotado]:[color:var(--primary-700)] data-[estado=obito]:[background:var(--bg)] data-[estado=obito]:[color:var(--muted)] data-[estado=obito]:[border:1px_solid_var(--line)] max-[760px]:[grid-column:2] max-[760px]:[align-items:flex-start] max-[760px]:[text-align:left]" data-estado={animal.situacao}>
                 {situacaoLabel[animal.situacao]}
               </span>
-              {animal.emIsolamento ? <span className="[min-height:28px] [border-radius:999px] [padding:6px_10px] [display:inline-flex] [align-items:center] [justify-content:center] [width:fit-content] [font:700_12px/1_var(--body)] [white-space:nowrap] data-[estado=ativa]:[background:var(--ok-50)] data-[estado=ativa]:[color:var(--ok)] data-[estado=em\_higienizacao]:[background:var(--info-50)] data-[estado=em\_higienizacao]:[color:var(--info)] data-[estado=interditada]:[background:var(--crit-50)] data-[estado=interditada]:[color:var(--crit)] data-[estado=inativa]:[background:var(--bg)] data-[estado=inativa]:[color:var(--muted)] data-[estado=inativa]:[border:1px_solid_var(--line)] data-[estado=em\_tratamento]:[background:var(--info-50)] data-[estado=em\_tratamento]:[color:var(--info)] data-[estado=em\_quarentena\_observacao]:[background:var(--info-50)] data-[estado=em\_quarentena\_observacao]:[color:var(--info)] data-[estado=saudavel]:[background:var(--ok-50)] data-[estado=saudavel]:[color:var(--ok)] data-[estado=adotado]:[background:var(--primary-50)] data-[estado=adotado]:[color:var(--primary-700)] data-[estado=obito]:[background:var(--bg)] data-[estado=obito]:[color:var(--muted)] data-[estado=obito]:[border:1px_solid_var(--line)] max-[760px]:[grid-column:2] max-[760px]:[align-items:flex-start] max-[760px]:[text-align:left]" data-estado="em_quarentena_observacao">Isolamento</span> : null}
+              {animal.emIsolamento ? <span className="[min-height:28px] [border-radius:999px] [padding:6px_10px] [display:inline-flex] [align-items:center] [justify-content:center] [width:fit-content] [font:700_12px/1_var(--body)] [white-space:nowrap] data-[estado=ativa]:[background:var(--ok-50)] data-[estado=ativa]:[color:var(--ok)] data-[estado=em\_higienizacao]:[background:var(--info-50)] data-[estado=em\_higienizacao]:[color:var(--info)] data-[estado=interditada]:[background:var(--crit-50)] data-[estado=interditada]:[color:var(--crit)] data-[estado=inativa]:[background:var(--bg)] data-[estado=inativa]:[color:var(--muted)] data-[estado=inativa]:[border:1px_solid_var(--line)] data-[estado=em\_tratamento]:[background:var(--info-50)] data-[estado=em\_tratamento]:[color:var(--info)] data-[estado=em\_quarentena\_observacao]:[background:var(--info-50)] data-[estado=em\_quarentena\_observacao]:[color:var(--info)] data-[estado=em\_observacao\_antirrabica]:[background:var(--warn-50)] data-[estado=em\_observacao\_antirrabica]:[color:var(--warn)] data-[estado=saudavel]:[background:var(--ok-50)] data-[estado=saudavel]:[color:var(--ok)] data-[estado=adotado]:[background:var(--primary-50)] data-[estado=adotado]:[color:var(--primary-700)] data-[estado=obito]:[background:var(--bg)] data-[estado=obito]:[color:var(--muted)] data-[estado=obito]:[border:1px_solid_var(--line)] max-[760px]:[grid-column:2] max-[760px]:[align-items:flex-start] max-[760px]:[text-align:left]" data-estado="em_quarentena_observacao">Isolamento</span> : null}
             </div>
             <h2>{animal.nome}</h2>
             <p className="[font-family:var(--mono)] [font-variant-numeric:tabular-nums] [font-size:14px]">{animal.numeroRegistro}</p>
@@ -383,7 +417,12 @@ function Ficha({
             {animal.alertas.map((alerta) => (
               <li key={`${alerta.tipo}-${alerta.mensagem}`}>
                 <span>{alerta.mensagem}</span>
-                <AlertAction tipo={alerta.tipo} disabled={!podeEditar} />
+                <AlertAction
+                  tipo={alerta.tipo}
+                  disabled={!podeEditar}
+                  podeEncerrarObservacao={podeEditar && observacaoAntirrabica !== null}
+                  onEncerrarObservacao={() => setEncerrarObservacaoAberto(true)}
+                />
               </li>
             ))}
           </ul>
@@ -419,6 +458,51 @@ function Ficha({
         </section>
       ) : null}
 
+      <section className="[background:var(--surface)] [border:1px_solid_var(--line)] [border-radius:10px] [padding:20px] [display:flex] [flex-direction:column] [gap:16px] [box-shadow:var(--shadow)] [grid-column:1] max-[760px]:[grid-column:auto]" id="vacinacao-ficha" aria-label="Vacinação">
+        <SectionHeader
+          icon={<Syringe aria-hidden="true" />}
+          title="Vacinação"
+          note={podeOperarVacinacao ? "Doses, protocolos e reações adversas." : "Somente consulta: registrar dose é ação clínica."}
+        />
+        {observacaoAntirrabica ? (
+          <Alert>
+            <AlertDescription>
+              <span className="[display:flex] [align-items:center] [justify-content:space-between] [gap:10px] [flex-wrap:wrap]">
+                <span>
+                  Observação antirrábica iniciada em {formatDateOnly(observacaoAntirrabica.inicioEm)} ·{" "}
+                  {observacaoAntirrabica.vencida
+                    ? "período encerrado, registre a observação final."
+                    : `${observacaoAntirrabica.diasRestantes === 1 ? "falta 1 dia" : `faltam ${observacaoAntirrabica.diasRestantes} dias`}.`}
+                </span>
+                {podeEditar ? (
+                  <Button type="button" variant="outline" onClick={() => setEncerrarObservacaoAberto(true)}>
+                    Encerrar observação
+                  </Button>
+                ) : null}
+              </span>
+            </AlertDescription>
+          </Alert>
+        ) : null}
+        <SecaoVacinacao
+          animalId={animal.id}
+          somenteLeitura={animal.somenteLeitura}
+          podeOperar={podeOperarVacinacao}
+          podeAnular={podeAnularAplicacao}
+          podeRegistrarReacao={podeRegistrarReacao}
+          reacoes={animal.reacoesAdversas ?? []}
+          idadeAnimal={idadeEmSemanas(animal)}
+          onAnimalAlterado={onChanged}
+        />
+      </section>
+
+      <DialogoEncerrarObservacao
+        open={encerrarObservacaoAberto}
+        animalId={animal.id}
+        periodo={observacaoAntirrabica}
+        onOpenChange={setEncerrarObservacaoAberto}
+        onEncerrado={onChanged}
+      />
+
       <section className="[background:var(--surface)] [border:1px_solid_var(--line)] [border-radius:10px] [padding:20px] [display:flex] [flex-direction:column] [gap:16px] [box-shadow:var(--shadow)] [grid-column:1] max-[760px]:[grid-column:auto] [grid-column:1_/_-1] max-[760px]:[grid-column:auto]" aria-label="Histórico do animal">
         <SectionHeader icon={<ClipboardList aria-hidden="true" />} title="Histórico" note={`${animal.eventos?.length ?? 0} evento(s) do animal`} />
         <Timeline eventos={animal.eventos ?? []} />
@@ -427,7 +511,43 @@ function Ficha({
   );
 }
 
-function AlertAction({ tipo, disabled }: { tipo: string; disabled: boolean }) {
+const ALERTAS_DE_VACINACAO = new Set([
+  "sem_vacinacao_registrada",
+  "esquema_vacinal_incompleto",
+  "dose_vencida",
+  "dose_a_vencer",
+  "vacina_obrigatoria_pendente",
+  "protocolo_vacinal_interrompido",
+  "reacao_adversa_em_acompanhamento",
+]);
+
+function AlertAction({
+  tipo,
+  disabled,
+  podeEncerrarObservacao,
+  onEncerrarObservacao,
+}: {
+  tipo: string;
+  disabled: boolean;
+  podeEncerrarObservacao: boolean;
+  onEncerrarObservacao: () => void;
+}) {
+  // A pendência do período antirrábico cobra a observação final: a ação abre o encerramento.
+  if (tipo === "observacao_antirrabica_vencida" || tipo === "observacao_antirrabica_em_curso") {
+    if (!podeEncerrarObservacao) return null;
+    return (
+      <Button type="button" variant="outline" onClick={onEncerrarObservacao}>
+        Encerrar observação
+      </Button>
+    );
+  }
+  if (ALERTAS_DE_VACINACAO.has(tipo)) {
+    return (
+      <Button asChild variant="outline">
+        <a href="#vacinacao-ficha">Ver vacinação</a>
+      </Button>
+    );
+  }
   const target = tipo === "sem_baia" ? "#baia-ficha" : "#dados-ficha";
   const label = tipo === "sem_baia" ? "Resolver na baia" : "Editar dados";
   return (
@@ -583,7 +703,7 @@ function AnimalEditForm({
             value={form.situacao}
             disabled={disabled || saving}
             onValueChange={(value) => update("situacao", value as FormFicha["situacao"])}
-            options={(["em_tratamento", "em_quarentena_observacao", "saudavel", "obito"] as const).map((situacao) => ({ value: situacao, label: situacaoLabel[situacao] }))}
+            options={(["em_tratamento", "em_quarentena_observacao", "em_observacao_antirrabica", "saudavel", "obito"] as const).map((situacao) => ({ value: situacao, label: situacaoLabel[situacao] }))}
           />
         </Field>
         <Field label="Peso atual em kg" htmlFor="animal-edit-peso">
@@ -1115,6 +1235,7 @@ function RevogarTerminal({ animal, onChanged }: { animal: Animal; onChanged: () 
               options={[
                 { value: "em_tratamento", label: "Em tratamento" },
                 { value: "em_quarentena_observacao", label: "Quarentena/observação" },
+                { value: "em_observacao_antirrabica", label: "Observação antirrábica" },
                 { value: "saudavel", label: "Saudável" },
               ]}
             />

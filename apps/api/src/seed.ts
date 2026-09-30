@@ -196,6 +196,45 @@ export async function seedRacasAnimais(prisma: PrismaClient): Promise<void> {
   }
 }
 
+// Só a antirrábica é semeada: é o caso de uso UC07 e a razão sanitária do CCZ. As demais vacinas
+// dependem de doses, intervalos e idades mínimas que são decisão clínica, então a Coordenação as
+// cadastra na tela. `update: {}` garante que rodar o seed de novo nunca sobrescreve o que a equipe editou.
+const VACINAS_PADRAO = [
+  {
+    nome: "Antirrábica",
+    especies: ["cao", "gato"] as ("cao" | "gato")[],
+    totalDoses: 1,
+    intervaloDosesDias: null,
+    revacinacaoDias: 365,
+    diasAvisoProximaDose: 7,
+    idadeMinimaSemanas: 12,
+    obrigatoria: true,
+  },
+];
+
+export async function seedVacinas(prisma: PrismaClient): Promise<void> {
+  const logger = new Logger("SeedVacinas");
+
+  try {
+    await prisma.$transaction(
+      VACINAS_PADRAO.map((vacina) => {
+        const nome = vacina.nome.normalize("NFC").trim().replace(/\s+/g, " ");
+        return prisma.vacina.upsert({
+          where: { nomeNormalizado: normalizarNomeCatalogo(nome) },
+          create: { ...vacina, nome, nomeNormalizado: normalizarNomeCatalogo(nome) },
+          update: {},
+        });
+      }),
+    );
+
+    logger.log(`Catálogo de vacinas sincronizado (${VACINAS_PADRAO.length} entrada).`);
+  } catch (error) {
+    logger.warn(
+      `Seed de vacinas ignorado: banco indisponível, migration pendente ou falha ao gravar. ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
 function loadLocalEnv(path: string) {
   if (!existsSync(path)) return;
   for (const line of readFileSync(path, "utf8").split("\n")) {
@@ -223,6 +262,7 @@ async function main() {
       get: (key) => process.env[key],
     });
     await seedRacasAnimais(prisma);
+    await seedVacinas(prisma);
   } finally {
     await prisma.$disconnect();
   }

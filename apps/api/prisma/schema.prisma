@@ -67,6 +67,7 @@ enum PorteAnimal {
 enum SituacaoAnimal {
   em_tratamento
   em_quarentena_observacao
+  em_observacao_antirrabica
   saudavel
   adotado
   obito
@@ -96,6 +97,31 @@ enum TipoEventoAnimal {
   exame
   diagnostico
   revogacao_situacao_terminal
+  aplicacao_vacina
+  edicao_aplicacao_vacina
+  anulacao_aplicacao_vacina
+  interrupcao_protocolo_vacinal
+  retomada_protocolo_vacinal
+  criacao_agendamento_vacina
+  remarcacao_agendamento_vacina
+  cancelamento_agendamento_vacina
+  falta_agendamento_vacina
+  reabertura_agendamento_vacina
+  reacao_adversa
+  encerramento_observacao_antirrabica
+}
+
+enum GravidadeReacaoAdversa {
+  leve
+  moderada
+  grave
+}
+
+enum DesfechoReacaoAdversa {
+  em_acompanhamento
+  resolvida
+  resolvida_com_sequela
+  obito
 }
 
 model Usuario {
@@ -110,14 +136,19 @@ model Usuario {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
-  funcionario           Funcionario?
-  refreshTokens         RefreshToken[]
-  solicitacoesDecididas Solicitacao[]      @relation("SolicitacaoDecisor")
-  auditoriaEventos      AuditoriaEvento[]
-  animaisCriados        Animal[]           @relation("AnimalCriador")
-  pesagensAnimais       PesagemAnimal[]
-  observacoesAnimais    ObservacaoAnimal[]
-  eventosAnimais        EventoAnimal[]
+  funcionario             Funcionario?
+  refreshTokens           RefreshToken[]
+  solicitacoesDecididas   Solicitacao[]          @relation("SolicitacaoDecisor")
+  auditoriaEventos        AuditoriaEvento[]
+  animaisCriados          Animal[]               @relation("AnimalCriador")
+  pesagensAnimais         PesagemAnimal[]
+  observacoesAnimais      ObservacaoAnimal[]
+  eventosAnimais          EventoAnimal[]
+  protocolosInterrompidos ProtocoloVacinal[]     @relation("ProtocoloInterrompidoPor")
+  aplicacoesRegistradas   AplicacaoVacina[]      @relation("AplicacaoRegistradaPor")
+  aplicacoesAnuladas      AplicacaoVacina[]      @relation("AplicacaoAnuladaPor")
+  agendamentosResponsavel AgendamentoVacinacao[] @relation("AgendamentoResponsavel")
+  agendamentosCriados     AgendamentoVacinacao[] @relation("AgendamentoCriadoPor")
 
   @@map("usuarios")
 }
@@ -216,40 +247,45 @@ model RacaAnimal {
 }
 
 model Animal {
-  id                        Int                   @id @default(autoincrement())
-  nome                      String
-  numeroRegistro            String
-  numeroRegistroNormalizado String                @unique
-  especie                   EspecieAnimal
-  racaId                    Int?
-  sexo                      SexoAnimal            @default(nao_informado)
-  porte                     PorteAnimal           @default(nao_informado)
-  corPelagem                String?
-  situacao                  SituacaoAnimal        @default(em_tratamento)
-  emIsolamento              Boolean               @default(false)
-  castrado                  StatusCastracaoAnimal @default(nao_informado)
-  pesoAtualKg               Decimal?              @db.Decimal(7, 3)
-  dataAcolhimento           DateTime?
-  dataNascimento            DateTime?
-  idadeEstimadaQuantidade   Int?
-  idadeEstimadaUnidade      UnidadeIdadeAnimal?
-  idadeAproximada           Boolean               @default(false)
-  nasceuNoCcz               Boolean               @default(false)
-  baiaId                    Int?
-  criadoPorId               Int?
-  acolhidoPor               String?
-  createdAt                 DateTime              @default(now())
-  updatedAt                 DateTime              @updatedAt
+  id                            Int                   @id @default(autoincrement())
+  nome                          String
+  numeroRegistro                String
+  numeroRegistroNormalizado     String                @unique
+  especie                       EspecieAnimal
+  racaId                        Int?
+  sexo                          SexoAnimal            @default(nao_informado)
+  porte                         PorteAnimal           @default(nao_informado)
+  corPelagem                    String?
+  situacao                      SituacaoAnimal        @default(em_tratamento)
+  emIsolamento                  Boolean               @default(false)
+  castrado                      StatusCastracaoAnimal @default(nao_informado)
+  pesoAtualKg                   Decimal?              @db.Decimal(7, 3)
+  dataAcolhimento               DateTime?
+  dataNascimento                DateTime?
+  idadeEstimadaQuantidade       Int?
+  idadeEstimadaUnidade          UnidadeIdadeAnimal?
+  idadeAproximada               Boolean               @default(false)
+  nasceuNoCcz                   Boolean               @default(false)
+  observacaoAntirrabicaInicioEm DateTime?
+  baiaId                        Int?
+  criadoPorId                   Int?
+  acolhidoPor                   String?
+  createdAt                     DateTime              @default(now())
+  updatedAt                     DateTime              @updatedAt
 
-  raca        RacaAnimal?        @relation(fields: [racaId], references: [id], onDelete: SetNull)
-  baia        Baia?              @relation(fields: [baiaId], references: [id], onDelete: SetNull)
-  criadoPor   Usuario?           @relation("AnimalCriador", fields: [criadoPorId], references: [id], onDelete: SetNull)
-  fotos       FotoAnimal[]
-  pesagens    PesagemAnimal[]
-  observacoes ObservacaoAnimal[]
-  eventos     EventoAnimal[]
+  raca                  RacaAnimal?            @relation(fields: [racaId], references: [id], onDelete: SetNull)
+  baia                  Baia?                  @relation(fields: [baiaId], references: [id], onDelete: SetNull)
+  criadoPor             Usuario?               @relation("AnimalCriador", fields: [criadoPorId], references: [id], onDelete: SetNull)
+  fotos                 FotoAnimal[]
+  pesagens              PesagemAnimal[]
+  observacoes           ObservacaoAnimal[]
+  eventos               EventoAnimal[]
+  protocolosVacinais    ProtocoloVacinal[]
+  aplicacoesVacinas     AplicacaoVacina[]
+  agendamentosVacinacao AgendamentoVacinacao[]
 
   @@index([especie, situacao])
+  @@index([situacao, observacaoAntirrabicaInicioEm])
   @@index([baiaId])
   @@index([racaId])
   @@map("animais")
@@ -315,10 +351,156 @@ model EventoAnimal {
   usuarioId Int?
   createdAt DateTime         @default(now())
 
-  animal  Animal   @relation(fields: [animalId], references: [id], onDelete: Cascade)
-  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  // Reação adversa pós-vacinal: gravidade e desfecho só existem nesse tipo de evento.
+  // O desfecho muda com o tempo, mas o evento é imutável: a atualização é um evento novo
+  // que aponta para o original em `eventoOrigemId`. O desfecho corrente é o da ponta da cadeia.
+  aplicacaoVacinaId Int?
+  eventoOrigemId    Int?
+  gravidadeReacao   GravidadeReacaoAdversa?
+  desfechoReacao    DesfechoReacaoAdversa?
+
+  animal          Animal           @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  usuario         Usuario?         @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  aplicacaoVacina AplicacaoVacina? @relation(fields: [aplicacaoVacinaId], references: [id], onDelete: SetNull)
+  eventoOrigem    EventoAnimal?    @relation("CadeiaDesfechoReacao", fields: [eventoOrigemId], references: [id], onDelete: SetNull)
+  atualizacoes    EventoAnimal[]   @relation("CadeiaDesfechoReacao")
 
   @@index([animalId, createdAt])
   @@index([tipo, createdAt])
+  @@index([tipo, aplicacaoVacinaId])
+  @@index([eventoOrigemId])
   @@map("eventos_animais")
+}
+
+enum StatusProtocoloVacinal {
+  em_andamento
+  concluido
+  interrompido
+}
+
+enum StatusAgendamentoVacinacao {
+  agendado
+  aplicado
+  faltou
+  cancelado
+}
+
+model Vacina {
+  id                   Int             @id @default(autoincrement())
+  nome                 String
+  nomeNormalizado      String          @unique
+  especies             EspecieAnimal[]
+  totalDoses           Int
+  intervaloDosesDias   Int?
+  revacinacaoDias      Int?
+  diasAvisoProximaDose Int             @default(7)
+  idadeMinimaSemanas   Int?
+  fabricante           String?
+  viaAplicacaoSugerida String?
+  obrigatoria          Boolean         @default(false)
+  observacoes          String?
+  ativa                Boolean         @default(true)
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  protocolos   ProtocoloVacinal[]
+  aplicacoes   AplicacaoVacina[]
+  agendamentos AgendamentoVacinacao[]
+
+  @@index([ativa])
+  @@map("vacinas")
+}
+
+model ProtocoloVacinal {
+  id                 Int                    @id @default(autoincrement())
+  animalId           Int
+  vacinaId           Int
+  dosesPrevistas     Int
+  intervaloDosesDias Int?
+  revacinacaoDias    Int?
+  status             StatusProtocoloVacinal @default(em_andamento)
+  motivoInterrupcao  String?
+  interrompidoPorId  Int?
+  interrompidoEm     DateTime?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  animal          Animal                 @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  vacina          Vacina                 @relation(fields: [vacinaId], references: [id], onDelete: Restrict)
+  interrompidoPor Usuario?               @relation("ProtocoloInterrompidoPor", fields: [interrompidoPorId], references: [id], onDelete: SetNull)
+  aplicacoes      AplicacaoVacina[]
+  agendamentos    AgendamentoVacinacao[]
+
+  @@unique([animalId, vacinaId])
+  @@index([vacinaId, status])
+  @@map("protocolos_vacinais")
+}
+
+model AplicacaoVacina {
+  id                       Int       @id @default(autoincrement())
+  animalId                 Int
+  vacinaId                 Int
+  protocoloId              Int
+  numeroDose               Int
+  dataAplicacao            DateTime  @db.Date
+  lote                     String
+  loteNormalizado          String
+  validadeLote             DateTime? @db.Date
+  viaAplicacao             String?
+  observacao               String?
+  registradoPorId          Int?
+  aplicadoPor              String?
+  registroRetroativo       Boolean   @default(false)
+  aplicadaAdiantada        Boolean   @default(false)
+  motivoAdiantada          String?
+  diasAntecipacao          Int?
+  dataProximaDose          DateTime? @db.Date
+  dataProximaDoseCalculada DateTime? @db.Date
+  prontuarioId             Int?
+  anuladaEm                DateTime?
+  anuladaPorId             Int?
+  motivoAnulacao           String?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  animal             Animal                @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  vacina             Vacina                @relation(fields: [vacinaId], references: [id], onDelete: Restrict)
+  protocolo          ProtocoloVacinal      @relation(fields: [protocoloId], references: [id], onDelete: Cascade)
+  registradoPor      Usuario?              @relation("AplicacaoRegistradaPor", fields: [registradoPorId], references: [id], onDelete: SetNull)
+  anuladaPor         Usuario?              @relation("AplicacaoAnuladaPor", fields: [anuladaPorId], references: [id], onDelete: SetNull)
+  agendamentoBaixado AgendamentoVacinacao? @relation("AgendamentoAplicacao")
+  reacoesAdversas    EventoAnimal[]
+
+  @@index([animalId, dataAplicacao])
+  @@index([protocoloId])
+  @@index([loteNormalizado])
+  @@map("aplicacoes_vacinas")
+}
+
+model AgendamentoVacinacao {
+  id                 Int                        @id @default(autoincrement())
+  animalId           Int
+  vacinaId           Int
+  protocoloId        Int
+  numeroDosePrevista Int
+  dataHoraPrevista   DateTime
+  responsavelId      Int?
+  observacao         String?
+  status             StatusAgendamentoVacinacao @default(agendado)
+  motivoCancelamento String?
+  aplicacaoId        Int?                       @unique
+  criadoPorId        Int?
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+
+  animal      Animal           @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  vacina      Vacina           @relation(fields: [vacinaId], references: [id], onDelete: Restrict)
+  protocolo   ProtocoloVacinal @relation(fields: [protocoloId], references: [id], onDelete: Cascade)
+  responsavel Usuario?         @relation("AgendamentoResponsavel", fields: [responsavelId], references: [id], onDelete: SetNull)
+  criadoPor   Usuario?         @relation("AgendamentoCriadoPor", fields: [criadoPorId], references: [id], onDelete: SetNull)
+  aplicacao   AplicacaoVacina? @relation("AgendamentoAplicacao", fields: [aplicacaoId], references: [id], onDelete: SetNull)
+
+  @@index([status, dataHoraPrevista])
+  @@index([animalId])
+  @@map("agendamentos_vacinacao")
 }

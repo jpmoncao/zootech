@@ -3,7 +3,6 @@ import {
   Controller,
   Delete,
   Get,
-  Logger,
   Param,
   ParseIntPipe,
   Patch,
@@ -28,6 +27,7 @@ import { CreateEventoAnimalDto } from "./dto/create-evento-animal.dto";
 import { CreateObservacaoAnimalDto } from "./dto/create-observacao-animal.dto";
 import { CreatePesagemAnimalDto } from "./dto/create-pesagem-animal.dto";
 import { CreateRacaAnimalDto } from "./dto/create-raca-animal.dto";
+import { EncerrarObservacaoAntirrabicaDto } from "./dto/encerrar-observacao-antirrabica.dto";
 import { ListAnimaisDto } from "./dto/list-animais.dto";
 import { RevogarSituacaoDto } from "./dto/revogar-situacao.dto";
 import { UpdateAnimalDto } from "./dto/update-animal.dto";
@@ -129,6 +129,17 @@ export class AnimaisController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.animais.removerFoto(id, fotoId, user);
+  }
+
+  // Encerrar a observação antirrábica é endpoint próprio porque são três escritas
+  // que precisam suceder juntas: observação final, mudança de situação e limpeza do período.
+  @Post(":id/encerrar-observacao-antirrabica")
+  encerrarObservacaoAntirrabica(
+    @Param("id", ParseIntPipe) id: number,
+    @Body() dto: EncerrarObservacaoAntirrabicaDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.animais.encerrarObservacaoAntirrabica(id, dto, user);
   }
 
   @Post(":id/revogar-situacao")
