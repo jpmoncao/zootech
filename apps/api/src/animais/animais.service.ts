@@ -10,6 +10,7 @@ import { ConfigService } from "@nestjs/config";
 import {
   Prisma,
   type Animal,
+  type CastracaoAnimal,
   type EspecieAnimal,
   type EventoAnimal,
   type FotoAnimal,
@@ -28,15 +29,22 @@ import { PrismaService } from "../prisma/prisma.service";
 import { dataCivilLocal, diffDias, hojeCivil } from "../vacinacao/datas";
 import { resolverProximaDose } from "../vacinacao/protocolo";
 import { AlocarAnimalDto } from "./dto/alocar-animal.dto";
+import { CancelarCastracaoDto } from "./dto/cancelar-castracao.dto";
+import { ConcluirCastracaoDto } from "./dto/concluir-castracao.dto";
 import { CreateAnimalDto } from "./dto/create-animal.dto";
+import { CreateCastracaoAgendamentoDto } from "./dto/create-castracao-agendamento.dto";
+import { CreateCastracaoAvaliacaoDto } from "./dto/create-castracao-avaliacao.dto";
+import { CreateCastracaoLegadaDto } from "./dto/create-castracao-legada.dto";
 import { CreateEventoAnimalDto } from "./dto/create-evento-animal.dto";
 import { CreateObservacaoAnimalDto } from "./dto/create-observacao-animal.dto";
 import { CreatePesagemAnimalDto } from "./dto/create-pesagem-animal.dto";
 import { CreateRacaAnimalDto } from "./dto/create-raca-animal.dto";
 import { EncerrarObservacaoAntirrabicaDto } from "./dto/encerrar-observacao-antirrabica.dto";
 import { ListAnimaisDto } from "./dto/list-animais.dto";
+import { ListCastracoesDto } from "./dto/list-castracoes.dto";
 import { RevogarSituacaoDto } from "./dto/revogar-situacao.dto";
 import { UpdateAnimalDto } from "./dto/update-animal.dto";
+import { estadoCastracaoAnimal } from "./estado-castracao";
 
 const TERMINAIS: SituacaoAnimal[] = ["adotado", "obito"];
 const OBSERVACAO_ANTIRRABICA: SituacaoAnimal = "em_observacao_antirrabica";
@@ -74,6 +82,7 @@ const LIST_INCLUDE = {
     include: { usuario: { select: { id: true, nome: true } } },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
   },
+  castracoes: { include: { usuario: { select: { id: true, nome: true } } }, orderBy: [{ createdAt: "desc" }, { id: "desc" }] },
 } satisfies Prisma.AnimalInclude;
 
 const DETAIL_INCLUDE = {
@@ -89,6 +98,15 @@ const DETAIL_INCLUDE = {
   eventos: {
     include: { usuario: { select: { id: true, nome: true } } },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+  },
+  adocoes: {
+    include: {
+      tutor: true,
+      adotadaPor: { select: { id: true, nome: true } },
+      liberacao: { include: { autorizadaPor: { select: { id: true, nome: true } } } },
+      devolucao: { include: { recebidaPor: { select: { id: true, nome: true } }, baia: { select: { id: true, codigo: true } } } },
+    },
+    orderBy: [{ adotadaEm: "desc" }, { id: "desc" }],
   },
 } satisfies Prisma.AnimalInclude;
 
@@ -123,6 +141,43 @@ function asDate(value: string | null | undefined): Date | null | undefined {
   return new Date(value);
 }
 
+function hasTime(value: string): boolean {
+  return /t\d{2}:\d{2}/i.test(value);
+}
+
+const FUSO_ADOCAO = "America/Sao_Paulo";
+
+function partesLocais(data: Date) {
+  const partes = new Intl.DateTimeFormat("en-US", {
+    timeZone: FUSO_ADOCAO,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(data);
+  return Object.fromEntries(partes.filter((parte) => parte.type !== "literal").map((parte) => [parte.type, Number(parte.value)])) as Record<"year" | "month" | "day" | "hour", number>;
+}
+
+function inicioLocalUtc(data: string): Date {
+  const [ano, mes, dia] = data.split("-").map(Number);
+  const calendario = new Date(Date.UTC(ano, mes - 1, dia));
+  if (calendario.getUTCFullYear() !== ano || calendario.getUTCMonth() !== mes - 1 || calendario.getUTCDate() !== dia) {
+    throw new BadRequestException("Data de adoção inválida.");
+  }
+  const tratadoComoUtc = Date.UTC(ano, mes - 1, dia);
+  const localParts = partesLocais(new Date(tratadoComoUtc));
+  const localComoUtc = Date.UTC(localParts.year, localParts.month - 1, localParts.day, localParts.hour);
+  const offset = localComoUtc - tratadoComoUtc;
+  return new Date(tratadoComoUtc - offset);
+}
+
+function fimLocalUtc(data: string): Date {
+  const [ano, mes, dia] = data.split("-").map(Number);
+  const proximoDia = new Date(Date.UTC(ano, mes - 1, dia + 1));
+  return inicioLocalUtc(proximoDia.toISOString().slice(0, 10));
+}
+
 @Injectable()
 export class AnimaisService {
   private readonly mediaRoot: string;
@@ -142,6 +197,21 @@ export class AnimaisService {
   async listar(filtros: ListAnimaisDto) {
     const pagina = filtros.pagina ?? 1;
     const limite = filtros.limite ?? 20;
+    const adotadaDe = filtros.adotadaDe ? inicioLocalUtc(filtros.adotadaDe) : undefined;
+    const adotadaAte = filtros.adotadaAte ? inicioLocalUtc(filtros.adotadaAte) : undefined;
+    if (adotadaDe && adotadaAte && adotadaDe >= adotadaAte) {
+      throw new BadRequestException("O início do período de adoção deve ser anterior ao fim.");
+    }
+    const periodoAdocao = adotadaDe || adotadaAte
+      ? {
+        some: {
+          adotadaEm: {
+            ...(adotadaDe ? { gte: adotadaDe } : {}),
+            ...(filtros.adotadaAte ? { lt: fimLocalUtc(filtros.adotadaAte) } : {}),
+          },
+        },
+      }
+      : undefined;
     const where: Prisma.AnimalWhereInput = {
       ...(filtros.busca?.trim()
         ? {
@@ -154,9 +224,9 @@ export class AnimaisService {
       ...(filtros.especie ? { especie: filtros.especie } : {}),
       ...(filtros.sexo ? { sexo: filtros.sexo } : {}),
       ...(filtros.porte ? { porte: filtros.porte } : {}),
-      ...(filtros.castrado ? { castrado: filtros.castrado } : {}),
       ...(filtros.baiaId ? { baiaId: filtros.baiaId } : {}),
       ...(filtros.semBaia ? { baiaId: null } : {}),
+      ...(periodoAdocao ? { adocoes: periodoAdocao } : {}),
       ...(filtros.situacao
         ? { situacao: filtros.situacao }
         : filtros.incluirTerminais
@@ -241,6 +311,7 @@ export class AnimaisService {
   async atualizar(id: number, dto: UpdateAnimalDto, ator: AuthUser) {
     try {
       const animal = await this.prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM "animais" WHERE id = ${id} FOR UPDATE`;
         const atual = await tx.animal.findUnique({ where: { id }, include: DETAIL_INCLUDE });
         if (!atual) throw new NotFoundException("Animal não encontrado.");
         this.assertEditable(atual);
@@ -437,6 +508,7 @@ export class AnimaisService {
       throw new BadRequestException("Informe a baia de destino ou null para retirar o animal da baia.");
     }
     return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "animais" WHERE id = ${id} FOR UPDATE`;
       const atual = await tx.animal.findUnique({ where: { id }, include: DETAIL_INCLUDE });
       if (!atual) throw new NotFoundException("Animal não encontrado.");
       this.assertEditable(atual);
@@ -466,6 +538,215 @@ export class AnimaisService {
       await this.createEvento(tx, id, "mudanca_baia", resumo, ator.id, dados);
       await this.createAudit(tx, ator.id, id, "animal_baia_alterada", dados);
       return this.viewAnimal(atualizado, await this.vacinasObrigatorias(tx));
+    });
+  }
+
+  async listarCastracoes(animalId: number) {
+    await this.exists(animalId);
+    const castracoes = await this.prisma.castracaoAnimal.findMany({
+      where: { animalId },
+      include: { usuario: { select: { id: true, nome: true, perfilAcesso: true } } },
+      orderBy: [{ dataHoraPlanejada: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+    });
+    return castracoes.map((castracao) => this.viewCastracao(castracao));
+  }
+
+  async listarAgendaCastracoes(filtros: ListCastracoesDto) {
+    const estado = filtros.estado ?? "agendada";
+    const pagina = filtros.pagina ?? 1;
+    const limite = filtros.limite ?? 20;
+    if (filtros.de && filtros.ate && filtros.de > filtros.ate) {
+      throw new BadRequestException("A data inicial não pode ser posterior à final.");
+    }
+    const dateField = estado === "realizada" ? "dataEfetiva" : "dataHoraPlanejada";
+    const inicio = filtros.de ? new Date(`${filtros.de}T00:00:00.000Z`) : undefined;
+    const fim = filtros.ate ? new Date(`${filtros.ate}T00:00:00.000Z`) : undefined;
+    if (inicio && (Number.isNaN(inicio.getTime()) || inicio.toISOString().slice(0, 10) !== filtros.de) ||
+      fim && (Number.isNaN(fim.getTime()) || fim.toISOString().slice(0, 10) !== filtros.ate)) {
+      throw new BadRequestException("Período inválido.");
+    }
+    fim?.setUTCDate(fim.getUTCDate() + 1);
+    const busca = filtros.busca?.trim();
+    const where: Prisma.CastracaoAnimalWhereInput = {
+      tipo: "procedimento",
+      estado,
+      ...(inicio || fim ? { [dateField]: { ...(inicio ? { gte: inicio } : {}), ...(fim ? { lt: fim } : {}) } } : {}),
+      ...(busca ? { animal: { OR: [
+        { nome: { contains: busca, mode: "insensitive" } },
+        { numeroRegistro: { contains: busca, mode: "insensitive" } },
+      ] } } : {}),
+    };
+    const [total, registros] = await this.prisma.$transaction([
+      this.prisma.castracaoAnimal.count({ where }),
+      this.prisma.castracaoAnimal.findMany({
+        where,
+        include: {
+          animal: { select: { id: true, nome: true, numeroRegistro: true, especie: true, situacao: true, baia: { select: { id: true, codigo: true } } } },
+          usuario: { select: { id: true, nome: true } },
+        },
+        orderBy: [{ [dateField]: estado === "agendada" ? "asc" : "desc" }, { createdAt: "desc" }, { id: "desc" }],
+        skip: (pagina - 1) * limite,
+        take: limite,
+      }),
+    ]);
+    return { itens: registros, total, pagina, limite };
+  }
+
+  async avaliarCastracao(animalId: number, dto: CreateCastracaoAvaliacaoDto, ator: AuthUser) {
+    return this.prisma.$transaction(async (tx) => {
+      const animal = await this.lockAnimalOrThrow(tx, animalId);
+      this.assertEditable(animal);
+      const castracao = await tx.castracaoAnimal.create({
+        data: {
+          animalId,
+          tipo: "avaliacao",
+          estado: "nao_castrado",
+          origem: "fluxo",
+          dataAvaliacao: dto.dataAvaliacao ? new Date(dto.dataAvaliacao) : new Date(),
+          observacao: dto.observacao?.trim() || null,
+          usuarioId: ator.id,
+        },
+        include: { usuario: { select: { id: true, nome: true, perfilAcesso: true } } },
+      });
+      await this.registrarEventoCastracao(tx, animalId, castracao.id, "Avaliação registrada: animal não castrado.", ator.id, {
+        acao: "avaliacao_nao_castrado",
+        dataAvaliacao: castracao.dataAvaliacao?.toISOString() ?? null,
+        observacao: castracao.observacao,
+      });
+      return this.viewCastracao(castracao);
+    });
+  }
+
+  async registrarCastracaoLegada(animalId: number, dto: CreateCastracaoLegadaDto, ator: AuthUser) {
+    return this.prisma.$transaction(async (tx) => {
+      const animal = await this.lockAnimalOrThrow(tx, animalId);
+      this.assertEditable(animal);
+      await this.assertSemProcedimentoRealizado(tx, animalId);
+      const dataEfetiva = dto.dataEfetiva ? new Date(dto.dataEfetiva) : null;
+      const castracao = await tx.castracaoAnimal.create({
+        data: {
+          animalId,
+          tipo: "procedimento",
+          estado: "realizada",
+          origem: "legada",
+          dataEfetiva,
+          dataEfetivaTemHora: Boolean(dto.dataEfetivaTemHora && dataEfetiva),
+          observacao: dto.observacao?.trim() || "Procedimento realizado registrado sem agenda.",
+          usuarioId: ator.id,
+        },
+        include: { usuario: { select: { id: true, nome: true, perfilAcesso: true } } },
+      });
+      await this.registrarEventoCastracao(tx, animalId, castracao.id, "Castração realizada registrada.", ator.id, {
+        acao: "procedimento_realizado_legado",
+        dataEfetiva: castracao.dataEfetiva?.toISOString() ?? null,
+        dataEfetivaTemHora: castracao.dataEfetivaTemHora,
+        observacao: castracao.observacao,
+      });
+      return this.viewCastracao(castracao);
+    });
+  }
+
+  async agendarCastracao(animalId: number, dto: CreateCastracaoAgendamentoDto, ator: AuthUser) {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+      const animal = await this.lockAnimalOrThrow(tx, animalId);
+      this.assertEditable(animal);
+      await this.assertSemProcedimentoRealizado(tx, animalId);
+      const dataHoraPlanejada = this.futureDate(dto.dataHoraPlanejada, "Agendamento exige data e hora futuras.");
+      const castracao = await tx.castracaoAnimal.create({
+        data: {
+          animalId,
+          tipo: "procedimento",
+          estado: "agendada",
+          origem: "fluxo",
+          dataHoraPlanejada,
+          observacao: dto.observacao?.trim() || null,
+          usuarioId: ator.id,
+        },
+        include: { usuario: { select: { id: true, nome: true, perfilAcesso: true } } },
+      });
+      await this.registrarEventoCastracao(tx, animalId, castracao.id, "Castração agendada.", ator.id, {
+        acao: "agendamento_criado",
+        dataHoraPlanejada: dataHoraPlanejada.toISOString(),
+        observacao: castracao.observacao,
+      });
+      return this.viewCastracao(castracao);
+      });
+    } catch (error) {
+      this.mapUnique(error, "Animal já possui um agendamento de castração ativo.");
+    }
+  }
+
+  async reagendarCastracao(animalId: number, castracaoId: number, dto: CreateCastracaoAgendamentoDto, ator: AuthUser) {
+    return this.prisma.$transaction(async (tx) => {
+      const animal = await this.lockAnimalOrThrow(tx, animalId);
+      this.assertEditable(animal);
+      const atual = await this.getCastracaoDoAnimal(tx, animalId, castracaoId);
+      this.assertCastracaoAgendada(atual);
+      const dataHoraPlanejada = this.futureDate(dto.dataHoraPlanejada, "Reagendamento exige data e hora futuras.");
+      const castracao = await tx.castracaoAnimal.update({
+        where: { id: castracaoId },
+        data: {
+          dataHoraPlanejada,
+          observacao: dto.observacao?.trim() ?? atual.observacao,
+          usuarioId: ator.id,
+        },
+        include: { usuario: { select: { id: true, nome: true, perfilAcesso: true } } },
+      });
+      await this.registrarEventoCastracao(tx, animalId, castracao.id, "Castração reagendada.", ator.id, {
+        acao: "agendamento_reagendado",
+        antes: atual.dataHoraPlanejada?.toISOString() ?? null,
+        depois: dataHoraPlanejada.toISOString(),
+      });
+      return this.viewCastracao(castracao);
+    });
+  }
+
+  async concluirCastracao(animalId: number, castracaoId: number, dto: ConcluirCastracaoDto, ator: AuthUser) {
+    return this.prisma.$transaction(async (tx) => {
+      const animal = await this.lockAnimalOrThrow(tx, animalId);
+      this.assertEditable(animal);
+      const atual = await this.getCastracaoDoAnimal(tx, animalId, castracaoId);
+      this.assertCastracaoAgendada(atual);
+      await this.assertSemProcedimentoRealizado(tx, animalId);
+      const dataEfetiva = new Date(dto.dataEfetiva);
+      const castracao = await tx.castracaoAnimal.update({
+        where: { id: castracaoId },
+        data: {
+          estado: "realizada",
+          dataEfetiva,
+          dataEfetivaTemHora: dto.dataEfetivaTemHora ?? hasTime(dto.dataEfetiva),
+          observacao: dto.observacao?.trim() ?? atual.observacao,
+          usuarioId: ator.id,
+        },
+        include: { usuario: { select: { id: true, nome: true, perfilAcesso: true } } },
+      });
+      await this.registrarEventoCastracao(tx, animalId, castracao.id, "Castração concluída.", ator.id, {
+        acao: "procedimento_concluido",
+        dataEfetiva: dataEfetiva.toISOString(),
+        dataEfetivaTemHora: castracao.dataEfetivaTemHora,
+      });
+      return this.viewCastracao(castracao);
+    });
+  }
+
+  async cancelarCastracao(animalId: number, castracaoId: number, dto: CancelarCastracaoDto, ator: AuthUser) {
+    return this.prisma.$transaction(async (tx) => {
+      await this.lockAnimalOrThrow(tx, animalId);
+      const atual = await this.getCastracaoDoAnimal(tx, animalId, castracaoId);
+      this.assertCastracaoAgendada(atual);
+      const motivo = normalizeText(dto.motivo);
+      const castracao = await tx.castracaoAnimal.update({
+        where: { id: castracaoId },
+        data: { estado: "cancelada", motivoCancelamento: motivo, usuarioId: ator.id },
+        include: { usuario: { select: { id: true, nome: true, perfilAcesso: true } } },
+      });
+      await this.registrarEventoCastracao(tx, animalId, castracao.id, "Agendamento de castração cancelado.", ator.id, {
+        acao: "agendamento_cancelado",
+        motivo,
+        dataHoraPlanejada: atual.dataHoraPlanejada?.toISOString() ?? null,
+      });
+      return this.viewCastracao(castracao);
     });
   }
 
@@ -577,9 +858,13 @@ export class AnimaisService {
       throw new ForbiddenException("Somente a coordenação pode revogar situação terminal.");
     }
     return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "animais" WHERE id = ${id} FOR UPDATE`;
       const atual = await tx.animal.findUnique({ where: { id }, include: DETAIL_INCLUDE });
       if (!atual) throw new NotFoundException("Animal não encontrado.");
       if (!TERMINAIS.includes(atual.situacao)) throw new ConflictException("Animal não está em situação terminal.");
+      if (atual.situacao === "adotado") {
+        throw new ConflictException("A adoção não pode ser revogada. Registre uma devolução para reabrir o ciclo do animal.");
+      }
       const atualizado = await tx.animal.update({
         where: { id },
         data: {
@@ -633,7 +918,6 @@ export class AnimaisService {
       situacao: dto.situacao ?? "em_tratamento",
       observacaoAntirrabicaInicioEm: dto.situacao === OBSERVACAO_ANTIRRABICA ? new Date() : null,
       emIsolamento: dto.emIsolamento ?? false,
-      castrado: dto.castrado ?? "nao_informado",
       pesoAtualKg: dto.pesoAtualKg,
       dataAcolhimento: datas.dataAcolhimento,
       dataNascimento: datas.dataNascimento,
@@ -675,7 +959,6 @@ export class AnimaisService {
       }
     }
     if (dto.emIsolamento !== undefined) data.emIsolamento = dto.emIsolamento;
-    if (dto.castrado !== undefined) data.castrado = dto.castrado;
     if (dto.pesoAtualKg !== undefined) data.pesoAtualKg = dto.pesoAtualKg;
     if (dto.acolhidoPor !== undefined) data.acolhidoPor = dto.acolhidoPor ? normalizeText(dto.acolhidoPor) : null;
     const shouldResolveDates = [
@@ -793,6 +1076,10 @@ export class AnimaisService {
     return `Animal retirado da baia ${origemCodigo}.`;
   }
 
+  private estadoCastracao(castracoes: CastracaoAnimal[]): "agendada" | "realizada" | "nao_castrado" | "cancelada" | "nao_informado" {
+    return estadoCastracaoAnimal(castracoes);
+  }
+
   private requiredText(value: string, message: string) {
     const normalized = normalizeText(value);
     if (!normalized) throw new BadRequestException(message);
@@ -850,7 +1137,7 @@ export class AnimaisService {
     };
   }
 
-  private snapshot(animal: Animal | AnimalDetailEntity) {
+  private snapshot(animal: (Animal | AnimalDetailEntity) & { castracoes?: CastracaoAnimal[] }) {
     return {
       nome: animal.nome,
       numeroRegistro: animal.numeroRegistro,
@@ -861,7 +1148,7 @@ export class AnimaisService {
       corPelagem: animal.corPelagem,
       situacao: animal.situacao,
       emIsolamento: animal.emIsolamento,
-      castrado: animal.castrado,
+      estadoCastracao: this.estadoCastracao(animal.castracoes ?? []),
       pesoAtualKg: animal.pesoAtualKg?.toString() ?? null,
       dataAcolhimento: animal.dataAcolhimento?.toISOString() ?? null,
       dataNascimento: animal.dataNascimento?.toISOString() ?? null,
@@ -888,11 +1175,13 @@ export class AnimaisService {
     vacinasObrigatorias: VacinaObrigatoria[],
   ) {
     const alertas: { tipo: string; mensagem: string }[] = [];
-    if (!animal.baiaId) alertas.push({ tipo: "sem_baia", mensagem: "Animal sem baia alocada." });
+    if (!animal.baiaId && !TERMINAIS.includes(animal.situacao)) alertas.push({ tipo: "sem_baia", mensagem: "Animal sem baia alocada." });
     if (animal.sexo === "nao_informado") alertas.push({ tipo: "sexo_nao_informado", mensagem: "Sexo não informado." });
     if (!animal.raca || animal.raca.tipo === "nao_informada") alertas.push({ tipo: "raca_nao_informada", mensagem: "Raça não informada." });
     if (animal.idadeAproximada) alertas.push({ tipo: "idade_aproximada", mensagem: "Idade aproximada." });
-    if (animal.castrado === "nao_informado") alertas.push({ tipo: "castracao_nao_informada", mensagem: "Castração não informada." });
+    if (this.estadoCastracao(animal.castracoes) === "nao_informado") {
+      alertas.push({ tipo: "sem_castracao", mensagem: "Castração não informada." });
+    }
 
     // Animal em situação terminal fica somente para consulta: não cobra vacina, observação nem reação.
     if (TERMINAIS.includes(animal.situacao)) return alertas;
@@ -1022,6 +1311,8 @@ export class AnimaisService {
     // vacinação por `GET /animais/:id/vacinacao` e reações por `reacoesAdversas`.
     const base = {
       ...omitir(animal, "protocolosVacinais", "eventos"),
+      estadoCastracao: this.estadoCastracao(animal.castracoes),
+      castracoes: animal.castracoes.map((castracao) => this.viewCastracao(castracao)),
       pesoAtualKg: animal.pesoAtualKg?.toString() ?? null,
       somenteLeitura: TERMINAIS.includes(animal.situacao),
       alertas: this.alertas(animal, vacinasObrigatorias),
@@ -1035,6 +1326,10 @@ export class AnimaisService {
         eventos: animal.eventos.map((evento) => this.viewEvento(evento)),
         reacoesAdversas: this.reacoesAdversas(animal.eventos),
         observacaoAntirrabica: this.observacaoAntirrabica(animal),
+        adocoes: animal.adocoes.map((adocao) => ({
+          ...omitir(adocao, "caminhoAssinatura", "nomeArquivoAssinatura", "mimeTypeAssinatura", "tamanhoAssinatura"),
+          assinaturaUrl: `/animais/${animal.id}/adocoes/assinatura/${adocao.id}`,
+        })),
       };
     }
     return base;
@@ -1066,6 +1361,10 @@ export class AnimaisService {
       createdAt: foto.createdAt,
       url: `/animais/${foto.animalId}/fotos/${foto.id}/arquivo`,
     };
+  }
+
+  private viewCastracao(castracao: CastracaoAnimal & { usuario?: { id: number; nome: string; perfilAcesso?: string } | null }) {
+    return castracao;
   }
 
   private async processFoto(file: Express.Multer.File) {
@@ -1149,6 +1448,52 @@ export class AnimaisService {
       data: { animalId, tipo, resumo, usuarioId, dados: dados as Prisma.InputJsonValue },
       include: { usuario: { select: { id: true, nome: true } } },
     });
+  }
+
+  private async lockAnimalOrThrow(tx: Prisma.TransactionClient, animalId: number) {
+    await tx.$queryRaw`SELECT id FROM "animais" WHERE id = ${animalId} FOR UPDATE`;
+    const animal = await tx.animal.findUnique({ where: { id: animalId } });
+    if (!animal) throw new NotFoundException("Animal não encontrado.");
+    return animal;
+  }
+
+  private async getCastracaoDoAnimal(tx: Prisma.TransactionClient, animalId: number, castracaoId: number) {
+    const castracao = await tx.castracaoAnimal.findFirst({ where: { id: castracaoId, animalId } });
+    if (!castracao) throw new NotFoundException("Registro de castração não encontrado.");
+    return castracao;
+  }
+
+  private assertCastracaoAgendada(castracao: Pick<CastracaoAnimal, "tipo" | "estado">) {
+    if (castracao.tipo !== "procedimento" || castracao.estado !== "agendada") {
+      throw new ConflictException("Operação permitida apenas para castração agendada.");
+    }
+  }
+
+  private async assertSemProcedimentoRealizado(tx: Prisma.TransactionClient, animalId: number) {
+    const realizado = await tx.castracaoAnimal.findFirst({
+      where: { animalId, tipo: "procedimento", estado: "realizada" },
+      select: { id: true },
+    });
+    if (realizado) throw new ConflictException("Animal já possui procedimento de castração realizado.");
+  }
+
+  private futureDate(value: string, message: string) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime()) || date <= new Date()) throw new BadRequestException(message);
+    return date;
+  }
+
+  private async registrarEventoCastracao(
+    tx: Prisma.TransactionClient,
+    animalId: number,
+    castracaoId: number,
+    resumo: string,
+    usuarioId: number,
+    dados: Record<string, unknown>,
+  ) {
+    const payload = { castracaoId, ...dados };
+    await this.createEvento(tx, animalId, "castracao", resumo, usuarioId, payload);
+    await this.createAudit(tx, usuarioId, animalId, "animal_castracao_alterada", payload);
   }
 
   private async createAudit(

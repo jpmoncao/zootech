@@ -7,6 +7,9 @@ import { HealthController } from "./health.controller";
 import { PrismaModule } from "./prisma/prisma.module";
 import { UsersModule } from "./users/users.module";
 import { VacinacaoModule } from "./vacinacao/vacinacao.module";
+import { TutoresModule } from "./tutores/tutores.module";
+import { AdocoesModule } from "./adocoes/adocoes.module";
+import { DashboardModule } from "./dashboard/dashboard.module";
 
 @Module({
   imports: [
@@ -17,6 +20,9 @@ import { VacinacaoModule } from "./vacinacao/vacinacao.module";
     BaiasModule,
     AnimaisModule,
     VacinacaoModule,
+    TutoresModule,
+    AdocoesModule,
+    DashboardModule,
   ],
   controllers: [HealthController],
 })

@@ -37,7 +37,7 @@ Pessoa do CCZ representada por `Funcionario` (`matricula`, `cargo`, `crmv`), her
 
 ### Tutor
 
-Responsável pelo animal depois da adoção. Herda de `Usuario` e tem endereço, bairro e quantidade de animais. O diagrama também dá a `Tutor` um `idTutor` próprio. O animal entra no CCZ sem tutor.
+Pessoa física responsável pelo animal durante uma adoção ativa. Informa dados pessoais, endereço e documento; foto pessoal e até três fotos documentais são opcionais. O diagrama original o faz herdar de `Usuario`, mas o cadastro de tutor desta spec não pressupõe login nem perfil de acesso. O animal entra no CCZ sem tutor e perde o vínculo de guarda atual quando uma devolução é registrada.
 
 ### Animal
 
@@ -61,7 +61,7 @@ Registro consultável pelo ADM/Coordenação no escopo administrativo e pela fic
 
 ### Timeline do animal
 
-Histórico cronológico reverso em `EventoAnimal`, alimentado por criação, edição, mudança de situação, mudança de baia, observação, pesagem, exame, diagnóstico, revogação de situação terminal, aplicação de vacina, reação adversa e sua atualização de desfecho, encerramento de observação antirrábica e as operações de agenda de vacinação. Observações e pesagens também têm tabelas append-only próprias; o evento dá a visão unificada da ficha.
+Histórico cronológico reverso em `EventoAnimal`, alimentado por criação, edição, mudança de situação, mudança de baia, observação, pesagem, foto, exame, diagnóstico, castração, revogação de situação terminal, aplicação de vacina, reação adversa e sua atualização de desfecho, encerramento de observação antirrábica e as operações de agenda de vacinação. Observações e pesagens também têm tabelas append-only próprias; o evento dá a visão unificada da ficha.
 
 ### Prontuário
 
@@ -101,11 +101,15 @@ Situação do animal (`em_observacao_antirrabica`), distinta de `em_quarentena_o
 
 ### Castração
 
-Pedido, cirurgia e pós-operatório de um animal. O diagrama limita a zero ou um registro por animal. A fila (`statusFila`) é operada pelo funcionário; agendar e executar é do veterinário.
+Avaliação ou tentativa de procedimento de um animal. No banco, `CastracaoAnimal` guarda origem (`fluxo` ou `legada`), tipo (`avaliacao` ou `procedimento`), estado (`nao_castrado`, `agendada`, `realizada`, `cancelada`), datas conhecidas, observação, motivo de cancelamento e autor. O campo de resposta `estadoCastracao` é derivado desses registros: realizada prevalece sobre agendada, avaliação de não castrado e cancelamento; ausência de registro significa “Não informado”, não “Não castrado”. Pode haver várias tentativas canceladas, mas só um agendamento ativo e só um procedimento realizado por animal.
 
 ### Adoção
 
-Registro de adoção de um animal, com termo assinado e status de acompanhamento. Zero ou um por animal no diagrama. É neste momento que o animal recebe o tutor.
+Registro imutável da entrega de um animal a um tutor. O funcionário comunica os termos fora do sistema; a confirmação registra dois switches de ciência/concordância e assinatura desenhada com mouse ou toque, sem texto ou versão dos termos. Torna o animal `adotado` e libera sua baia. Um animal pode ter várias adoções históricas, mas apenas uma ativa; nova adoção exige devolução da anterior. Adoção confirmada não pode ser revogada.
+
+### Devolução
+
+Movimentação que registra o retorno de animal adotado ao CCZ, preserva a adoção, as declarações e a assinatura anteriores, encerra o vínculo de guarda atual e devolve o animal a uma situação operacional. É pré-requisito para uma nova adoção do mesmo animal.
 
 ### Acolhimento
 

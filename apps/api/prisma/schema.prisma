@@ -73,16 +73,27 @@ enum SituacaoAnimal {
   obito
 }
 
-enum StatusCastracaoAnimal {
-  sim
-  nao
-  nao_informado
-}
-
 enum UnidadeIdadeAnimal {
   dias
   meses
   anos
+}
+
+enum TipoCastracaoAnimal {
+  avaliacao
+  procedimento
+}
+
+enum EstadoCastracaoAnimal {
+  nao_castrado
+  agendada
+  realizada
+  cancelada
+}
+
+enum OrigemCastracaoAnimal {
+  fluxo
+  legada
 }
 
 enum TipoEventoAnimal {
@@ -96,6 +107,7 @@ enum TipoEventoAnimal {
   foto
   exame
   diagnostico
+  castracao
   revogacao_situacao_terminal
   aplicacao_vacina
   edicao_aplicacao_vacina
@@ -144,6 +156,12 @@ model Usuario {
   pesagensAnimais         PesagemAnimal[]
   observacoesAnimais      ObservacaoAnimal[]
   eventosAnimais          EventoAnimal[]
+  tutoresCriados          Tutor[]                @relation("TutorCriadoPor")
+  tutoresAtualizados      Tutor[]                @relation("TutorAtualizadoPor")
+  adocoesRealizadas       Adocao[]               @relation("AdocaoRealizadaPor")
+  liberacoesConcedidas    LiberacaoAdocao[]      @relation("LiberacaoConcedidaPor")
+  devolucoesRecebidas     Devolucao[]            @relation("DevolucaoRecebidaPor")
+  castracoesAnimais       CastracaoAnimal[]
   protocolosInterrompidos ProtocoloVacinal[]     @relation("ProtocoloInterrompidoPor")
   aplicacoesRegistradas   AplicacaoVacina[]      @relation("AplicacaoRegistradaPor")
   aplicacoesAnuladas      AplicacaoVacina[]      @relation("AplicacaoAnuladaPor")
@@ -224,6 +242,7 @@ model Baia {
   updatedAt            DateTime   @updatedAt
 
   animais Animal[]
+  devolucoes Devolucao[]
 
   @@index([setor, estado])
   @@map("baias")
@@ -247,31 +266,30 @@ model RacaAnimal {
 }
 
 model Animal {
-  id                            Int                   @id @default(autoincrement())
+  id                            Int                 @id @default(autoincrement())
   nome                          String
   numeroRegistro                String
-  numeroRegistroNormalizado     String                @unique
+  numeroRegistroNormalizado     String              @unique
   especie                       EspecieAnimal
   racaId                        Int?
-  sexo                          SexoAnimal            @default(nao_informado)
-  porte                         PorteAnimal           @default(nao_informado)
+  sexo                          SexoAnimal          @default(nao_informado)
+  porte                         PorteAnimal         @default(nao_informado)
   corPelagem                    String?
-  situacao                      SituacaoAnimal        @default(em_tratamento)
-  emIsolamento                  Boolean               @default(false)
-  castrado                      StatusCastracaoAnimal @default(nao_informado)
-  pesoAtualKg                   Decimal?              @db.Decimal(7, 3)
+  situacao                      SituacaoAnimal      @default(em_tratamento)
+  emIsolamento                  Boolean             @default(false)
+  pesoAtualKg                   Decimal?            @db.Decimal(7, 3)
   dataAcolhimento               DateTime?
   dataNascimento                DateTime?
   idadeEstimadaQuantidade       Int?
   idadeEstimadaUnidade          UnidadeIdadeAnimal?
-  idadeAproximada               Boolean               @default(false)
-  nasceuNoCcz                   Boolean               @default(false)
+  idadeAproximada               Boolean             @default(false)
+  nasceuNoCcz                   Boolean             @default(false)
   observacaoAntirrabicaInicioEm DateTime?
   baiaId                        Int?
   criadoPorId                   Int?
   acolhidoPor                   String?
-  createdAt                     DateTime              @default(now())
-  updatedAt                     DateTime              @updatedAt
+  createdAt                     DateTime            @default(now())
+  updatedAt                     DateTime            @updatedAt
 
   raca                  RacaAnimal?            @relation(fields: [racaId], references: [id], onDelete: SetNull)
   baia                  Baia?                  @relation(fields: [baiaId], references: [id], onDelete: SetNull)
@@ -280,6 +298,9 @@ model Animal {
   pesagens              PesagemAnimal[]
   observacoes           ObservacaoAnimal[]
   eventos               EventoAnimal[]
+  adocoes               Adocao[]
+  liberacoes            LiberacaoAdocao[]
+  castracoes            CastracaoAnimal[]
   protocolosVacinais    ProtocoloVacinal[]
   aplicacoesVacinas     AplicacaoVacina[]
   agendamentosVacinacao AgendamentoVacinacao[]
@@ -289,6 +310,31 @@ model Animal {
   @@index([baiaId])
   @@index([racaId])
   @@map("animais")
+}
+
+model CastracaoAnimal {
+  id                  Int                    @id @default(autoincrement())
+  animalId            Int
+  tipo                TipoCastracaoAnimal
+  estado              EstadoCastracaoAnimal
+  origem              OrigemCastracaoAnimal  @default(fluxo)
+  dataHoraPlanejada   DateTime?
+  dataEfetiva         DateTime?
+  dataEfetivaTemHora  Boolean                @default(false)
+  dataAvaliacao       DateTime?
+  observacao          String?
+  motivoCancelamento  String?
+  usuarioId           Int?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  animal  Animal   @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([animalId, createdAt])
+  @@index([estado, dataHoraPlanejada])
+  @@index([usuarioId])
+  @@map("castracoes_animais")
 }
 
 model FotoAnimal {
@@ -503,4 +549,126 @@ model AgendamentoVacinacao {
   @@index([status, dataHoraPrevista])
   @@index([animalId])
   @@map("agendamentos_vacinacao")
+}
+
+model Tutor {
+  id                    Int       @id @default(autoincrement())
+  nome                  String
+  cpf                   String    @unique
+  telefone              String
+  email                 String?
+  tipoDocumento         String
+  numeroDocumento       String
+  cep                   String
+  logradouro            String
+  numero                String
+  complemento           String?
+  bairro                String
+  cidade                String
+  uf                    String    @db.Char(2)
+  criadoPorId           Int?
+  atualizadoPorId       Int?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  criadoPor     Usuario?          @relation("TutorCriadoPor", fields: [criadoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor Usuario?          @relation("TutorAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
+  foto          FotoTutor?
+  documentos    DocumentoTutor[]
+  adocoes       Adocao[]
+
+  @@index([nome])
+  @@index([numeroDocumento])
+  @@map("tutores")
+}
+
+model FotoTutor {
+  id             Int      @id @default(autoincrement())
+  tutorId        Int      @unique
+  caminhoRelativo String
+  nomeArquivo    String
+  mimeType       String
+  tamanhoBytes   Int
+  createdAt      DateTime @default(now())
+
+  tutor Tutor @relation(fields: [tutorId], references: [id], onDelete: Restrict)
+
+  @@map("fotos_tutores")
+}
+
+model DocumentoTutor {
+  id              Int      @id @default(autoincrement())
+  tutorId         Int
+  caminhoRelativo String
+  nomeArquivo     String
+  mimeType        String
+  tamanhoBytes    Int
+  createdAt       DateTime @default(now())
+
+  tutor Tutor @relation(fields: [tutorId], references: [id], onDelete: Restrict)
+
+  @@index([tutorId, createdAt])
+  @@map("documentos_tutores")
+}
+
+model LiberacaoAdocao {
+  id                 Int      @id @default(autoincrement())
+  animalId           Int
+  justificativa      String
+  autorizadaPorId    Int?
+  autorizadaEm       DateTime @default(now())
+  consumidaEm        DateTime?
+  createdAt          DateTime @default(now())
+
+  animal       Animal   @relation(fields: [animalId], references: [id], onDelete: Restrict)
+  autorizadaPor Usuario? @relation("LiberacaoConcedidaPor", fields: [autorizadaPorId], references: [id], onDelete: SetNull)
+  adocao       Adocao?
+
+  @@index([animalId, autorizadaEm])
+  @@map("liberacoes_adocao")
+}
+
+model Adocao {
+  id                    Int       @id @default(autoincrement())
+  animalId              Int
+  tutorId               Int
+  liberacaoId           Int?      @unique
+  consentiuTratamento   Boolean
+  consentiuAcompanhamento Boolean
+  caminhoAssinatura     String
+  nomeArquivoAssinatura String
+  mimeTypeAssinatura    String
+  tamanhoAssinatura     Int
+  adotadaPorId          Int?
+  adotadaEm             DateTime  @default(now())
+  encerradaEm           DateTime?
+  createdAt             DateTime  @default(now())
+
+  animal     Animal           @relation(fields: [animalId], references: [id], onDelete: Restrict)
+  tutor      Tutor            @relation(fields: [tutorId], references: [id], onDelete: Restrict)
+  liberacao  LiberacaoAdocao?  @relation(fields: [liberacaoId], references: [id], onDelete: Restrict)
+  adotadaPor Usuario?          @relation("AdocaoRealizadaPor", fields: [adotadaPorId], references: [id], onDelete: SetNull)
+  devolucao  Devolucao?
+
+  @@index([animalId, adotadaEm])
+  @@index([tutorId, adotadaEm])
+  @@map("adocoes")
+}
+
+model Devolucao {
+  id                 Int              @id @default(autoincrement())
+  adocaoId           Int              @unique
+  motivo             String
+  situacaoRetorno    SituacaoAnimal
+  baiaId             Int?
+  recebidaPorId      Int?
+  recebidaEm         DateTime         @default(now())
+  createdAt          DateTime         @default(now())
+
+  adocao      Adocao  @relation(fields: [adocaoId], references: [id], onDelete: Restrict)
+  baia        Baia?   @relation(fields: [baiaId], references: [id], onDelete: SetNull)
+  recebidaPor Usuario? @relation("DevolucaoRecebidaPor", fields: [recebidaPorId], references: [id], onDelete: SetNull)
+
+  @@index([baiaId])
+  @@map("devolucoes")
 }

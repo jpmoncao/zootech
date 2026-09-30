@@ -21,7 +21,6 @@ export class CreateAnimalDto {
   @IsOptional() @IsString() @MaxLength(80) corPelagem?: string;
   @IsOptional() @IsIn(["em_tratamento", "em_quarentena_observacao", "em_observacao_antirrabica", "saudavel", "obito"]) situacao?: "em_tratamento" | "em_quarentena_observacao" | "em_observacao_antirrabica" | "saudavel" | "obito";
   @IsOptional() @IsBoolean() emIsolamento?: boolean;
-  @IsOptional() @IsIn(["sim", "nao", "nao_informado"]) castrado?: "sim" | "nao" | "nao_informado";
   @IsOptional() @Type(() => Number) @IsNumber() @Min(0.001) pesoAtualKg?: number;
   @IsOptional() @IsDateString() dataAcolhimento?: string;
   @IsOptional() @IsDateString() dataNascimento?: string;

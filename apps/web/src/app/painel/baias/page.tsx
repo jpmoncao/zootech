@@ -1,11 +1,15 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Ban,
+  AlertTriangle,
+  Cat,
   Check,
   DoorOpen,
+  Dog,
   Edit3,
   History,
   Loader2,
@@ -16,15 +20,20 @@ import {
   SlidersHorizontal,
   Sparkles,
   X,
+  Waypoints,
   type LucideIcon,
+  DogIcon,
 } from "lucide-react";
 import { ControlSelect } from "@/components/control-select";
+import { AnimalPhoto } from "@/components/animal-photo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { castracaoStatusLabel, castracaoStatusTone, formatarDataCastracao } from "@/lib/castracao-status";
 import { Shell } from "../../../components/shell";
 import {
   ApiError,
@@ -37,6 +46,7 @@ import {
   obterBaia,
   type AcaoBaia,
   type Baia,
+  type BaiaOcupante,
   type BaiaHistoricoEvento,
   type CriarBaiaInput,
   type EstadoBaia,
@@ -45,6 +55,7 @@ import {
   type TipoBaia,
 } from "../../../lib/api";
 import { canManageBaias, canViewBaiasAudit } from "../../../lib/access";
+import { cn } from "cn";
 
 const setores: SetorBaia[] = ["canil", "gatil", "quarentena"];
 const estados: EstadoBaia[] = ["ativa", "em_higienizacao", "interditada", "inativa"];
@@ -66,6 +77,21 @@ const estadoLabel: Record<EstadoBaia, string> = {
   inativa: "Inativa",
   interditada: "Interditada",
   em_higienizacao: "Em higienização",
+};
+
+const situacaoAnimalLabel: Record<BaiaOcupante["situacao"], string> = {
+  em_tratamento: "Em tratamento",
+  em_quarentena_observacao: "Quarentena/observação",
+  em_observacao_antirrabica: "Observação antirrábica",
+  saudavel: "Saudável",
+  adotado: "Adotado",
+  obito: "Óbito",
+};
+
+const sexoAnimalLabel: Record<BaiaOcupante["sexo"], string> = {
+  macho: "Macho",
+  femea: "Fêmea",
+  nao_informado: "Não informado",
 };
 
 type ViewMode = "lista" | "mapa";
@@ -161,13 +187,15 @@ function Baias() {
 
   function selecionar(id: number) {
     const next = new URLSearchParams(searchParams.toString());
-    next.set("baia", String(id));
-    router.replace(`/painel/baias?${next.toString()}`, { scroll: false });
     if (id === selectedId) {
-      document.getElementById("baia-detalhe")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      return;
+      next.delete("baia");
+      levarAoDetalhe.current = false;
+    } else {
+      next.set("baia", String(id));
+      levarAoDetalhe.current = true;
     }
-    levarAoDetalhe.current = true;
+    const query = next.toString();
+    router.replace(query ? `/painel/baias?${query}` : "/painel/baias", { scroll: false });
   }
 
   useEffect(() => {
@@ -268,23 +296,23 @@ function Baias() {
 
         {selectedId != null ? (
           <div id="baia-detalhe" className="min-w-0 scroll-mt-4">
-          {detalheErro ? (
-            <section className="[background:var(--surface)] [border:1px_solid_var(--line)] [border-radius:10px] [padding:20px] [display:flex] [flex-direction:column] [gap:16px] [box-shadow:var(--shadow)] [min-width:0] [min-height:100%] min-[761px]:max-[1023px]:[min-height:0]">
-              <Alert variant="destructive">
-                <AlertDescription className="text-inherit">{detalheErro}</AlertDescription>
-              </Alert>
-            </section>
-          ) : detalheLoading || !detalhe ? (
-            <BaiaDetalheSkeleton />
-          ) : (
-            <BaiaDetalhe
-              baia={detalhe}
-              podeAdministrar={podeAdministrar}
-              podeVerHistorico={podeVerHistorico}
-              onEdit={abrirEdicao}
-              onChanged={(id) => void refreshBaia(id)}
-            />
-          )}
+            {detalheErro ? (
+              <section className="[background:var(--surface)] [border:1px_solid_var(--line)] [border-radius:10px] [padding:20px] [display:flex] [flex-direction:column] [gap:16px] [box-shadow:var(--shadow)] [min-width:0] [min-height:100%] min-[761px]:max-[1023px]:[min-height:0]">
+                <Alert variant="destructive">
+                  <AlertDescription className="text-inherit">{detalheErro}</AlertDescription>
+                </Alert>
+              </section>
+            ) : detalheLoading || !detalhe ? (
+              <BaiaDetalheSkeleton />
+            ) : (
+              <BaiaDetalhe
+                baia={detalhe}
+                podeAdministrar={podeAdministrar}
+                podeVerHistorico={podeVerHistorico}
+                onEdit={abrirEdicao}
+                onChanged={(id) => void refreshBaia(id)}
+              />
+            )}
           </div>
         ) : null}
       </div>
@@ -542,18 +570,19 @@ function BaiaDetalhe({
         </div>
       </dl>
 
-      <section className="[border-top:1px_solid_var(--line)] [padding-top:16px] [display:flex] [flex-direction:column] [gap:12px] [&_h2]:[margin:0] [&_h2]:[font-size:17px]">
-        <h2>Ocupantes</h2>
+      <section className="border-t border-line py-4 flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="m-0 text-[17px]">Ocupantes</h2>
+          <DogIcon className="size-5.5 text-primary" aria-hidden="true" />
+        </div>
         {baia.ocupantes.length === 0 ? (
-          <p className="[font-size:13px] [color:var(--muted)] [overflow-wrap:anywhere]">Nenhum ocupante vinculado a esta baia.</p>
+          <div className="flex flex-col gap-2.5 border border-line rounded-md p-3 pb-12 bg-muted-foreground/10 text-muted-foreground">
+            <p className="text-[13px] text-muted wrap-anywhere">Nenhum ocupante vinculado a esta baia.</p>
+          </div>
         ) : (
-          <div className="[display:flex] [flex-direction:column] [gap:10px]">
+          <div className="flex flex-col gap-2.5">
             {baia.ocupantes.map((ocupante) => (
-              <div key={ocupante.id} className="[border:1px_solid_var(--line)] [border-radius:8px] [padding:10px] [display:grid] [gap:2px] [&_span]:[color:var(--muted)] [&_span]:[font-size:13px] [&_small]:[color:var(--muted)] [&_small]:[font-size:13px]">
-                <strong>{ocupante.nome ?? ocupante.codigo ?? `Animal ${ocupante.id}`}</strong>
-                <span>{ocupante.especie ?? "Espécie não informada"}</span>
-                {ocupante.emIsolamento ? <small>Isolamento</small> : null}
-              </div>
+              <OcupanteRow key={ocupante.id} ocupante={ocupante} />
             ))}
           </div>
         )}
@@ -570,18 +599,69 @@ function BaiaDetalhe({
       )}
 
       {podeVerHistorico ? (
-        <section className="[border-top:1px_solid_var(--line)] [padding-top:16px] [display:flex] [flex-direction:column] [gap:12px] [&_h2]:[margin:0] [&_h2]:[font-size:17px]">
-          <div className="[display:flex] [align-items:flex-start] [justify-content:space-between] [gap:12px] [&_h2]:[margin:0] [&_h2]:[font-size:17px] [&>svg]:[width:22px] [&>svg]:[height:22px] [&>svg]:[color:var(--primary)] [&_svg]:[color:var(--primary)]">
-            <History aria-hidden="true" />
-            <h2>Histórico</h2>
+        <section className="border-t border-line py-4 flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="m-0 text-[17px]">Histórico</h2>
+            <History className="size-5.5 text-primary" aria-hidden="true" />
           </div>
-          {erroHistorico ? <p className="[font-size:13px] [color:var(--crit)]">{erroHistorico}</p> : null}
-          {historico === null ? <HistoricoSkeleton /> : null}
-          {historico?.length === 0 ? <p className="[font-size:13px] [color:var(--muted)] [overflow-wrap:anywhere]">Nenhum evento registrado.</p> : null}
-          {historico && historico.length > 0 ? <Historico eventos={historico} /> : null}
+          {
+            erroHistorico &&
+            <p className="text-[13px] text-crit">{erroHistorico}</p>
+          }
+          {
+            historico === null &&
+            <HistoricoSkeleton />
+          }
+          {
+            historico?.length === 0 &&
+            <p className="text-[13px] text-muted-foreground wrap-anywhere">Nenhum evento registrado.</p>
+          }
+          {
+            historico && historico.length > 0 &&
+            <Historico eventos={historico} />
+          }
         </section>
       ) : null}
     </section>
+  );
+}
+
+function OcupanteRow({ ocupante }: { ocupante: BaiaOcupante }) {
+  const foto = ocupante.fotos[0];
+  const Icon = ocupante.especie === "cao" ? Dog : Cat;
+  const castracao = ocupante.castracoes.find((item) => item.estado === ocupante.estadoCastracao);
+  const dataCastracao = castracao?.estado === "agendada" ? castracao.dataHoraPlanejada : castracao?.estado === "realizada" ? castracao.dataEfetiva : null;
+
+  return (
+    <div className="grid min-w-0 gap-3 rounded-[8px] border border-line bg-white p-3">
+      <Link href={`/painel/animais/${ocupante.id}`} className="grid min-w-0 grid-cols-[52px_minmax(0,1fr)] items-start gap-3 text-ink no-underline hover:text-primary focus-visible:rounded-[6px] focus-visible:outline-2 focus-visible:outline-primary" aria-label={`Abrir ficha de ${ocupante.nome}`}>
+        <span className="grid size-13 place-items-center overflow-hidden rounded-md bg-primary-50 text-primary [&_img]:h-full [&_img]:w-full [&_img]:object-cover" aria-hidden="true">
+          {foto ? <AnimalPhoto foto={foto} alt="" /> : <Icon size={24} />}
+        </span>
+        <span className="flex min-w-0 flex-col gap-1 [overflow-wrap:anywhere]">
+          <strong className="text-[16px] leading-tight">{ocupante.nome}</strong>
+          <span className="font-mono text-[13px] tabular-nums text-muted-foreground">Registro {ocupante.numeroRegistro}</span>
+          <span className="text-[13px] text-muted-foreground">{ocupante.raca?.nome ?? "Raça não informada"} · {ocupante.especie === "cao" ? "Cão" : "Gato"} · {sexoAnimalLabel[ocupante.sexo]}</span>
+          <span className="flex flex-wrap items-center gap-2 text-[12px] text-muted-foreground">
+            <span>Castração</span>
+            <span className={`rounded-md px-2 py-0.5 font-semibold ${castracaoStatusTone[ocupante.estadoCastracao]}`}>{castracaoStatusLabel[ocupante.estadoCastracao]}</span>
+            {dataCastracao ? <span>{formatarDataCastracao(dataCastracao, castracao?.estado !== "realizada" || castracao.dataEfetivaTemHora)}</span> : ocupante.estadoCastracao === "realizada" ? <span>Data não informada</span> : ocupante.estadoCastracao === "cancelada" ? <span>Histórico na ficha</span> : null}
+          </span>
+        </span>
+      </Link>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="rounded-full bg-ok-50 px-2.5 py-1 text-[12px] font-bold text-ok data-[situacao=em_tratamento]:bg-info-50 data-[situacao=em_tratamento]:text-info data-[situacao=em_quarentena_observacao]:bg-info-50 data-[situacao=em_quarentena_observacao]:text-info data-[situacao=em_observacao_antirrabica]:bg-warn-50 data-[situacao=em_observacao_antirrabica]:text-warn data-[situacao=adotado]:bg-violet-50 data-[situacao=adotado]:text-violet data-[situacao=obito]:bg-violet-50 data-[situacao=obito]:text-violet" data-situacao={ocupante.situacao}>{situacaoAnimalLabel[ocupante.situacao]}</span>
+        {ocupante.alertas.length > 0 ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button type="button" className="inline-flex min-h-8 items-center gap-1 text-[13px] font-semibold text-warn"><AlertTriangle size={14} aria-hidden="true" />{ocupante.alertas.length} alerta{ocupante.alertas.length === 1 ? "" : "s"}</button>
+            </TooltipTrigger>
+            <TooltipContent><ul className="m-0 flex flex-col gap-1 pl-4">{ocupante.alertas.map((alerta) => <li key={`${alerta.tipo}-${alerta.mensagem}`}>{alerta.mensagem}</li>)}</ul></TooltipContent>
+          </Tooltip>
+        ) : <span className="text-[13px] text-muted-foreground">Sem alertas</span>}
+        {ocupante.emIsolamento ? <span className="text-[12px] font-semibold text-warn">Em isolamento</span> : null}
+      </div>
+    </div>
   );
 }
 
@@ -615,15 +695,18 @@ function BaiaActions({ baia, onChanged }: { baia: Baia; onChanged: (id: number) 
   }
 
   return (
-    <section className="[border-top:1px_solid_var(--line)] [padding-top:16px] [display:flex] [flex-direction:column] [gap:12px] [&_h2]:[margin:0] [&_h2]:[font-size:17px]">
-      <h2>Ações operacionais</h2>
-      <form className="[display:flex] [flex-direction:column] [gap:10px]" onSubmit={submit}>
-        <div className="[display:grid] [grid-template-columns:repeat(2,_minmax(0,_1fr))] [gap:8px] max-[760px]:[grid-template-columns:1fr]" role="group" aria-label="Ações permitidas">
+    <section className="border-t border-line py-4 flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="m-0 text-[17px]">Ações operacionais</h2>
+        <Waypoints className="size-5.5 text-primary" aria-hidden="true" />
+      </div>
+      <form className="flex flex-col gap-2.5" onSubmit={submit}>
+        <div className="grid grid-cols-2 gap-2 max-[760px]:grid-cols-1" role="group" aria-label="Ações permitidas">
           {acoes.map((item) => (
             <button
               key={item}
               type="button"
-              className="[min-height:58px] [border:1px_solid_var(--line)] [border-radius:8px] [background:#fff] [color:var(--ink)] [padding:10px] [display:flex] [align-items:center] [gap:8px] [text-align:left] [font:700_13px/1.2_var(--body)] [cursor:pointer] [&_svg]:[width:18px] [&_svg]:[height:18px] [&_svg]:[flex:none] [&_svg]:[color:var(--primary)] data-[tone=ok]:[background:var(--ok-50)] data-[tone=ok]:[border-color:#b7dfc4] data-[tone=ok]:[&_svg]:[color:var(--ok)] data-[tone=info]:[background:var(--info-50)] data-[tone=info]:[border-color:#c6d9ec] data-[tone=info]:[&_svg]:[color:var(--info)] data-[tone=crit]:[background:var(--crit-50)] data-[tone=crit]:[border-color:#f0c2bc] data-[tone=crit]:[&_svg]:[color:var(--crit)] data-[tone=muted]:[background:var(--bg)] data-[tone=muted]:[border-color:var(--line)] data-[tone=muted]:[&_svg]:[color:var(--muted)] aria-[pressed=true]:[box-shadow:var(--focus)] data-[tone=ok]:aria-[pressed=true]:[border-color:var(--ok)] data-[tone=info]:aria-[pressed=true]:[border-color:var(--info)] data-[tone=crit]:aria-[pressed=true]:[border-color:var(--crit)] data-[tone=muted]:aria-[pressed=true]:[border-color:var(--muted)]"
+              className="min-h-14.5 border border-line rounded-md bg-white text-ink px-2.5 py-2.5 flex items-center gap-2 text-left font-semibold text-[13px]/1.2 cursor-pointer [&_svg]:size-4.5 [&_svg]:flex-none [&_svg]:text-primary data-[tone=ok]:bg-ok-50 data-[tone=ok]:border-ok data-[tone=ok]:text-ok data-[tone=info]:bg-info-50 data-[tone=info]:border-info data-[tone=info]:text-info data-[tone=crit]:bg-crit-50 data-[tone=crit]:border-crit data-[tone=crit]:text-crit data-[tone=muted]:bg-bg data-[tone=muted]:border-line data-[tone=muted]:text-muted aria-[pressed=true]:shadow-focus data-[tone=ok]:aria-[pressed=true]:border-ok data-[tone=info]:aria-[pressed=true]:border-info data-[tone=crit]:aria-[pressed=true]:border-crit data-[tone=muted]:aria-[pressed=true]:border-muted"
               data-tone={actionTone[item]}
               aria-pressed={acao === item}
               onClick={() => {
@@ -637,10 +720,10 @@ function BaiaActions({ baia, onChanged }: { baia: Baia; onChanged: (id: number) 
             </button>
           ))}
         </div>
-        {acoes.length === 0 ? <p className="[font-size:13px] [color:var(--muted)] [overflow-wrap:anywhere]">Nenhuma ação disponível para o estado atual.</p> : null}
+        {acoes.length === 0 ? <p className="text-[13px] text-muted-foreground wrap-anywhere">Nenhuma ação disponível para o estado atual.</p> : null}
         {acao ? (
           <>
-            <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
+            <div className="flex flex-col gap-1.5 [&_label]:text-[13px] [&_label]:font-semibold">
               <Label htmlFor="acao-observacao">Observação da ação (opcional)</Label>
               <Input
                 id="acao-observacao"
@@ -649,19 +732,31 @@ function BaiaActions({ baia, onChanged }: { baia: Baia; onChanged: (id: number) 
                 onChange={(event) => setObservacao(event.target.value)}
               />
             </div>
-            <p className="[font-size:13px] [color:var(--muted)] [overflow-wrap:anywhere]">{actionImpact[acao]}</p>
+            <p className="text-[13px] text-muted-foreground wrap-anywhere">{actionImpact[acao]}</p>
           </>
         ) : null}
-        {erro ? <p className="[font-size:13px] [color:var(--crit)]">{erro}</p> : null}
+        {erro ? <p className="text-[13px] text-crit">{erro}</p> : null}
         {ok ? (
           <Alert variant="success" role="status">
             <AlertDescription className="text-inherit">{ok}</AlertDescription>
           </Alert>
         ) : null}
-        <div className="[display:flex] [justify-content:space-between] [gap:12px] max-[760px]:[grid-template-columns:1fr] max-[760px]:[flex-direction:column] max-[760px]:[align-items:stretch]">
-          <Button type="submit" disabled={!acao || pending}>
+        <div className="flex justify-between gap-3 max-[760px]:grid max-[760px]:grid-cols-1 max-[760px]:items-stretch ml-auto">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setAcao(null)}
+            className={cn(!acao ? "hidden" : "inline-flex")}
+          >
+            <X className="size-4" aria-hidden="true" />
+            <span className="max-md:sr-only">Cancelar</span>
+          </Button>
+          <Button
+            type="submit"
+            disabled={!acao || pending}
+          >
             {pending ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Check aria-hidden="true" />}
-            Confirmar ação
+            <span className="max-md:sr-only">Confirmar ação</span>
           </Button>
         </div>
       </form>
@@ -824,7 +919,7 @@ function BaiaIdentity({ baia }: { baia: Baia }) {
 
 function StatusBadge({ estado }: { estado: EstadoBaia }) {
   return (
-    <span className="[min-height:28px] [border-radius:999px] [padding:6px_10px] [display:inline-flex] [align-items:center] [justify-content:center] [width:fit-content] [font:700_12px/1_var(--body)] [white-space:nowrap] data-[estado=ativa]:[background:var(--ok-50)] data-[estado=ativa]:[color:var(--ok)] data-[estado=em\_higienizacao]:[background:var(--info-50)] data-[estado=em\_higienizacao]:[color:var(--info)] data-[estado=interditada]:[background:var(--crit-50)] data-[estado=interditada]:[color:var(--crit)] data-[estado=inativa]:[background:var(--bg)] data-[estado=inativa]:[color:var(--muted)] data-[estado=inativa]:[border:1px_solid_var(--line)] data-[estado=em\_tratamento]:[background:var(--info-50)] data-[estado=em\_tratamento]:[color:var(--info)] data-[estado=em\_quarentena\_observacao]:[background:var(--info-50)] data-[estado=em\_quarentena\_observacao]:[color:var(--info)] data-[estado=saudavel]:[background:var(--ok-50)] data-[estado=saudavel]:[color:var(--ok)] data-[estado=adotado]:[background:var(--primary-50)] data-[estado=adotado]:[color:var(--primary-700)] data-[estado=obito]:[background:var(--bg)] data-[estado=obito]:[color:var(--muted)] data-[estado=obito]:[border:1px_solid_var(--line)] max-[760px]:[grid-column:2] max-[760px]:[align-items:flex-start] max-[760px]:[text-align:left]" data-estado={estado}>
+    <span className="[min-height:28px] [border-radius:999px] [padding:6px_10px] [display:inline-flex] [align-items:center] [justify-content:center] [width:fit-content] [font:700_12px/1_var(--body)] [white-space:nowrap] data-[estado=ativa]:[background:var(--ok-50)] data-[estado=ativa]:[color:var(--ok)] data-[estado=em\_higienizacao]:[background:var(--info-50)] data-[estado=em\_higienizacao]:[color:var(--info)] data-[estado=interditada]:[background:var(--crit-50)] data-[estado=interditada]:[color:var(--crit)] data-[estado=inativa]:[background:var(--bg)] data-[estado=inativa]:[color:var(--muted)] data-[estado=inativa]:[border:1px_solid_var(--line)] data-[estado=em\_tratamento]:[background:var(--info-50)] data-[estado=em\_tratamento]:[color:var(--info)] data-[estado=em\_quarentena\_observacao]:[background:var(--info-50)] data-[estado=em\_quarentena\_observacao]:[color:var(--info)] data-[estado=saudavel]:[background:var(--ok-50)] data-[estado=saudavel]:[color:var(--ok)] data-[estado=adotado]:[background:var(--violet-50)] data-[estado=adotado]:[color:var(--violet)] data-[estado=obito]:[background:var(--violet-50)] data-[estado=obito]:[color:var(--violet)] data-[estado=obito]:[border:1px_solid_var(--line)] max-[760px]:[grid-column:2] max-[760px]:[align-items:flex-start] max-[760px]:[text-align:left]" data-estado={estado}>
       {estadoLabel[estado]}
     </span>
   );
@@ -842,10 +937,10 @@ function Occupancy({ baia }: { baia: Baia }) {
 }
 
 const historicoTone = {
-  ok: "border-line border-l-ok bg-ok-50",
-  info: "border-line border-l-info bg-info-50",
-  crit: "border-line border-l-crit bg-crit-50",
-  muted: "border-line border-l-muted-foreground bg-background",
+  ok: "border-line bg-ok-50",
+  info: "border-line bg-info-50",
+  crit: "border-line bg-crit-50",
+  muted: "border-line bg-background",
 } as const;
 
 const historicoIconTone = {
@@ -864,18 +959,32 @@ function Historico({ eventos }: { eventos: BaiaHistoricoEvento[] }) {
       {eventos.map((evento) => {
         const tone = eventTone(evento.tipo);
         const Icon = eventIcon(evento.tipo);
+        const movimento = evento.movimentacao;
         return (
-          <li className={`flex items-start gap-3 rounded-lg border border-l-4 p-3 ${historicoTone[tone]}`} key={evento.id}>
+          <li className={`flex items-start gap-3 rounded-lg border p-3 ${historicoTone[tone]}`} key={evento.id}>
             <div className={`flex size-8 shrink-0 items-center justify-center rounded-full ${historicoIconTone[tone]}`}>
               <Icon className="size-4" aria-hidden="true" />
             </div>
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
               <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-                <strong className="text-sm font-semibold text-ink">{formatEventType(evento.tipo)}</strong>
+                <strong className="text-sm font-semibold text-ink">{movimento ? tituloMovimentacao(evento) : formatEventType(evento.tipo)}</strong>
                 <span className="text-xs text-muted-foreground">{formatarData(evento.createdAt)}</span>
               </div>
               <p className="text-xs text-muted-foreground">{evento.usuario?.nome ?? "Sistema"}</p>
-              <small className="wrap-break-word text-sm text-ink">{resumirEvento(evento.dados)}</small>
+              {movimento ? (
+                <div className="flex flex-col gap-1 text-sm text-ink [overflow-wrap:anywhere]">
+                  {movimento.animal ? (
+                    <Link href={`/painel/animais/${movimento.animal.id}`} className="w-fit font-semibold text-primary underline-offset-2 hover:underline">
+                      {movimento.animal.nome} · Registro {movimento.animal.numeroRegistro}
+                    </Link>
+                  ) : <strong>Animal #{movimento.animalId}</strong>}
+                  {movimento.animal ? <span className="text-xs text-muted-foreground">{movimento.animal.especie === "cao" ? "Cão" : "Gato"}</span> : null}
+                  {movimento.baiaRelacionada ? (
+                    <span>{movimento.direcao === "entrada" ? "Origem" : "Destino"}: baia {movimento.baiaRelacionada.codigo}</span>
+                  ) : evento.tipo === "animal_adocao_concluida" ? <span>Destino: adoção</span> : movimento.direcao === "entrada" ? <span>Origem: sem baia</span> : <span>Destino: sem baia</span>}
+                  {movimento.observacao ? <span>Observação: {movimento.observacao}</span> : null}
+                </div>
+              ) : <small className="wrap-break-word text-sm text-ink">{resumirEvento(evento.dados)}</small>}
             </div>
           </li>
         );
@@ -1037,6 +1146,7 @@ function formatNumber(value: string | number) {
 }
 
 function eventIcon(tipo: string): LucideIcon {
+  if (tipo.startsWith("animal_")) return Dog;
   if (tipo === "baia_criada") return Plus;
   if (tipo === "baia_editada") return Edit3;
   if (tipo.includes("higienizacao")) return Sparkles;
@@ -1047,11 +1157,20 @@ function eventIcon(tipo: string): LucideIcon {
 }
 
 function eventTone(tipo: string): "ok" | "info" | "crit" | "muted" {
+  if (tipo === "animal_adocao_concluida") return "ok";
+  if (tipo.startsWith("animal_")) return "info";
   if (tipo.endsWith("inativar")) return "muted";
   if (tipo.endsWith("interditar")) return "crit";
   if (tipo.includes("higienizacao") && !tipo.includes("concluida")) return "info";
   if (tipo.endsWith("liberar") || tipo.endsWith("reativar") || tipo.includes("concluida")) return "ok";
   return "info";
+}
+
+function tituloMovimentacao(evento: BaiaHistoricoEvento) {
+  if (evento.tipo === "animal_adocao_concluida") return "Saída por adoção";
+  if (evento.tipo === "animal_devolucao_registrada") return "Entrada após devolução";
+  if (evento.movimentacao?.baiaRelacionada) return evento.movimentacao.direcao === "entrada" ? "Entrada por transferência" : "Saída por transferência";
+  return evento.movimentacao?.direcao === "entrada" ? "Entrada na baia" : "Saída da baia";
 }
 
 function formatEventType(tipo: string) {

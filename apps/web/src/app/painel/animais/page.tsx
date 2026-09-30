@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
@@ -57,17 +58,16 @@ import {
   type RacaAnimal,
   type SexoAnimal,
   type SituacaoAnimal,
-  type StatusCastracaoAnimal,
   type UnidadeIdadeAnimal,
 } from "@/lib/api";
 import { canManageAnimais } from "@/lib/access";
+import { castracaoAtual, castracaoStatusLabel, castracaoStatusTone, formatarDataCastracao } from "@/lib/castracao-status";
 import { opcoesRaca, racaFormValue } from "@/lib/raca-options";
 
 const especies: EspecieAnimal[] = ["cao", "gato"];
 const sexos: SexoAnimal[] = ["macho", "femea", "nao_informado"];
 const portes: PorteAnimal[] = ["pequeno", "medio", "grande", "nao_informado"];
 const situacoes: SituacaoAnimal[] = ["em_tratamento", "em_quarentena_observacao", "em_observacao_antirrabica", "saudavel", "adotado", "obito"];
-const castracoes: StatusCastracaoAnimal[] = ["sim", "nao", "nao_informado"];
 const unidadesIdade: UnidadeIdadeAnimal[] = ["dias", "meses", "anos"];
 
 const especieLabel: Record<EspecieAnimal, string> = {
@@ -97,12 +97,6 @@ const situacaoLabel: Record<SituacaoAnimal, string> = {
   obito: "Óbito",
 };
 
-const castradoLabel: Record<StatusCastracaoAnimal, string> = {
-  sim: "Castrado",
-  nao: "Não castrado",
-  nao_informado: "Não informado",
-};
-
 const filtrosIniciais: ListarAnimaisFiltros = { pagina: 1, limite: 12 };
 const MAX_FOTOS = 10;
 const FILTER_ALL = "__all__";
@@ -118,7 +112,6 @@ type AnimalFormState = {
   sexo: SexoAnimal;
   porte: PorteAnimal;
   corPelagem: string;
-  castrado: StatusCastracaoAnimal;
   pesoAtualKg: string;
   dataNascimento: string;
   idadeEstimadaQuantidade: string;
@@ -142,7 +135,6 @@ const formInicial: AnimalFormState = {
   sexo: "nao_informado",
   porte: "nao_informado",
   corPelagem: "",
-  castrado: "nao_informado",
   pesoAtualKg: "",
   dataNascimento: "",
   idadeEstimadaQuantidade: "",
@@ -166,17 +158,18 @@ export default function Page() {
 }
 
 function Animais() {
+  const searchParams = useSearchParams();
   const user = getCurrentUser();
   const podeAdministrar = user ? canManageAnimais(user.perfilAcesso) : false;
   const [resultado, setResultado] = useState<ListaAnimais | null>(null);
-  const [filtros, setFiltros] = useState<ListarAnimaisFiltros>(filtrosIniciais);
-  const [busca, setBusca] = useState("");
+  const [filtros, setFiltros] = useState<ListarAnimaisFiltros>(() => filtrosDaUrl(searchParams));
+  const [busca, setBusca] = useState(() => searchParams.get("busca") ?? "");
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Animal | null>(null);
   const [baias, setBaias] = useState<Baia[]>([]);
-  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
+  const [filtrosAbertos, setFiltrosAbertos] = useState(() => temFiltrosAtivos(filtrosDaUrl(searchParams)));
 
   useEffect(() => {
     void carregar(filtros);
@@ -386,13 +379,12 @@ function Animais() {
                 />
               </div>
               <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
-                <Label htmlFor="animal-castracao">Castração</Label>
-                <ControlSelect
-                  id="animal-castracao"
-                  value={filtros.castrado ?? FILTER_ALL}
-                  onValueChange={(value) => atualizarFiltros({ ...filtros, castrado: valorEnum<StatusCastracaoAnimal>(value === FILTER_ALL ? "" : value) })}
-                  options={[{ value: FILTER_ALL, label: "Todas" }, ...castracoes.map((castracao) => ({ value: castracao, label: castradoLabel[castracao] }))]}
-                />
+                <Label htmlFor="animal-adotada-de">Adoção a partir de</Label>
+                <Input id="animal-adotada-de" type="date" value={filtros.adotadaDe ?? ""} onChange={(event) => atualizarFiltros({ ...filtros, adotadaDe: event.target.value || undefined, incluirTerminais: true })} />
+              </div>
+              <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
+                <Label htmlFor="animal-adotada-ate">Adoção até</Label>
+                <Input id="animal-adotada-ate" type="date" value={filtros.adotadaAte ?? ""} onChange={(event) => atualizarFiltros({ ...filtros, adotadaAte: event.target.value || undefined, incluirTerminais: true })} />
               </div>
               <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
                 <Label htmlFor="animal-baia">Baia</Label>
@@ -514,6 +506,8 @@ function Animais() {
 function AnimalRow({ animal, podeEditar, onEdit }: { animal: Animal; podeEditar: boolean; onEdit: (animal: Animal) => void }) {
   const foto = animal.fotos.find((item) => item.identificacao) ?? animal.fotos[0];
   const Icon = animal.especie === "cao" ? Dog : Cat;
+  const castracao = castracaoAtual(animal.castracoes, animal.estadoCastracao);
+  const dataCastracao = castracao?.estado === "agendada" ? castracao.dataHoraPlanejada : castracao?.estado === "realizada" ? castracao.dataEfetiva : null;
   const alertaTexto =
     animal.alertas.length === 0
       ? "Sem alertas"
@@ -527,15 +521,16 @@ function AnimalRow({ animal, podeEditar, onEdit }: { animal: Animal; podeEditar:
         </span>
         <span className="[min-width:0] [display:flex] [flex-direction:column] [gap:2px] [&_strong]:[font-size:17px] [&_span]:[color:var(--muted)] [&_span]:[font-size:13px] [&_small]:[color:var(--muted)] [&_small]:[font-size:13px] [&>*]:[overflow-wrap:anywhere]">
           <strong>{animal.nome}</strong>
-          <small className="[font-family:var(--mono)] [font-variant-numeric:tabular-nums] [font-size:14px]">{animal.numeroRegistro}</small>
+          <small className="[font-family:var(--mono)] [font-variant-numeric:tabular-nums] [font-size:14px]">Registro {animal.numeroRegistro}</small>
           <span>
             {animal.raca?.nome ?? "Raça não informada"} · {especieLabel[animal.especie]} · {sexoLabel[animal.sexo]}
           </span>
+          <span className="flex flex-wrap items-center gap-2"><span>Castração</span><span className={`rounded-md px-2 py-0.5 text-xs font-semibold ${castracaoStatusTone[animal.estadoCastracao]}`}>{castracaoStatusLabel[animal.estadoCastracao]}</span>{dataCastracao ? <span>{formatarDataCastracao(dataCastracao, castracao?.estado !== "realizada" || castracao.dataEfetivaTemHora)}</span> : animal.estadoCastracao === "realizada" ? <span>Data não informada</span> : animal.estadoCastracao === "cancelada" ? <span>Histórico na ficha</span> : null}</span>
         </span>
-        <span className="[min-height:28px] [border-radius:999px] [padding:6px_10px] [display:inline-flex] [align-items:center] [justify-content:center] [width:fit-content] [font:700_12px/1_var(--body)] [white-space:nowrap] data-[estado=ativa]:[background:var(--ok-50)] data-[estado=ativa]:[color:var(--ok)] data-[estado=em\_higienizacao]:[background:var(--info-50)] data-[estado=em\_higienizacao]:[color:var(--info)] data-[estado=interditada]:[background:var(--crit-50)] data-[estado=interditada]:[color:var(--crit)] data-[estado=inativa]:[background:var(--bg)] data-[estado=inativa]:[color:var(--muted)] data-[estado=inativa]:[border:1px_solid_var(--line)] data-[estado=em\_tratamento]:[background:var(--info-50)] data-[estado=em\_tratamento]:[color:var(--info)] data-[estado=em\_quarentena\_observacao]:[background:var(--info-50)] data-[estado=em\_quarentena\_observacao]:[color:var(--info)] data-[estado=em\_observacao\_antirrabica]:[background:var(--warn-50)] data-[estado=em\_observacao\_antirrabica]:[color:var(--warn)] data-[estado=saudavel]:[background:var(--ok-50)] data-[estado=saudavel]:[color:var(--ok)] data-[estado=adotado]:[background:var(--primary-50)] data-[estado=adotado]:[color:var(--primary-700)] data-[estado=obito]:[background:var(--bg)] data-[estado=obito]:[color:var(--muted)] data-[estado=obito]:[border:1px_solid_var(--line)] max-[760px]:[grid-column:2] max-[760px]:[align-items:flex-start] max-[760px]:[text-align:left]" data-estado={animal.situacao}>
-          {situacaoLabel[animal.situacao]}
+        <span className="[min-height:28px] [border-radius:999px] [padding:6px_10px] [display:inline-flex] [align-items:center] [justify-content:center] [width:fit-content] [font:700_12px/1_var(--body)] [white-space:nowrap] data-[estado=ativa]:[background:var(--ok-50)] data-[estado=ativa]:[color:var(--ok)] data-[estado=em\_higienizacao]:[background:var(--info-50)] data-[estado=em\_higienizacao]:[color:var(--info)] data-[estado=interditada]:[background:var(--crit-50)] data-[estado=interditada]:[color:var(--crit)] data-[estado=inativa]:[background:var(--bg)] data-[estado=inativa]:[color:var(--muted)] data-[estado=inativa]:[border:1px_solid_var(--line)] data-[estado=em\_tratamento]:[background:var(--info-50)] data-[estado=em\_tratamento]:[color:var(--info)] data-[estado=em\_quarentena\_observacao]:[background:var(--info-50)] data-[estado=em\_quarentena\_observacao]:[color:var(--info)] data-[estado=em\_observacao\_antirrabica]:[background:var(--warn-50)] data-[estado=em\_observacao\_antirrabica]:[color:var(--warn)] data-[estado=saudavel]:[background:var(--ok-50)] data-[estado=saudavel]:[color:var(--ok)] data-[estado=adotado]:[background:var(--primary-50)] data-[estado=adotado]:[color:var(--primary-700)] data-[estado=obito]:[background:var(--bg)] data-[estado=obito]:[color:var(--muted)] data-[estado=obito]:[border:1px_solid_var(--line)] max-[760px]:[grid-column:2] max-[760px]:[align-items:flex-start] max-[760px]:[text-align:left]" data-estado={animal.situacao}>          {situacaoLabel[animal.situacao]}
         </span>
         <span className="[&_small]:[color:var(--muted)] [&_small]:[font-size:13px] [display:flex] [flex-direction:column] [align-items:flex-end] [gap:2px] [text-align:right] [&_b]:[font-family:var(--mono)] [&_b]:[font-size:13px] max-[760px]:[grid-column:2] max-[760px]:[align-items:flex-start] max-[760px]:[text-align:left]">
+          <small>Baia</small>
           <b>{animal.baia?.codigo ?? "Sem baia"}</b>
         </span>
       </Link>
@@ -785,10 +780,6 @@ function AnimalFormDrawer({
                 <Input id="animal-form-pelagem" value={form.corPelagem} maxLength={80} onChange={(event) => update("corPelagem", event.target.value)} />
               </div>
               <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
-                <Label htmlFor="animal-form-castrado">Castração</Label>
-                <ControlSelect id="animal-form-castrado" value={form.castrado} onValueChange={(value) => update("castrado", value as StatusCastracaoAnimal)} options={castracoes.map((castracao) => ({ value: castracao, label: castradoLabel[castracao] }))} />
-              </div>
-              <div className="[display:flex] [flex-direction:column] [gap:6px] [&_label]:[font-size:13px] [&_label]:[font-weight:600]">
                 <Label htmlFor="animal-form-peso">Peso atual em kg</Label>
                 <Input id="animal-form-peso" type="number" min="0.001" step="0.001" inputMode="decimal" value={form.pesoAtualKg} onChange={(event) => update("pesoAtualKg", event.target.value)} />
               </div>
@@ -1026,7 +1017,6 @@ function estadoDoAnimal(animal: Animal | null): AnimalFormState {
     sexo: animal.sexo,
     porte: animal.porte,
     corPelagem: animal.corPelagem ?? "",
-    castrado: animal.castrado,
     pesoAtualKg: animal.pesoAtualKg ? String(animal.pesoAtualKg) : "",
     dataNascimento: toDateInput(animal.dataNascimento),
     idadeEstimadaQuantidade: animal.idadeEstimadaQuantidade != null ? String(animal.idadeEstimadaQuantidade) : "",
@@ -1088,7 +1078,6 @@ function payloadCriacao(form: AnimalFormState, racaId: number | undefined): Cria
     corPelagem: form.corPelagem.trim() || undefined,
     situacao: form.situacao,
     emIsolamento: form.emIsolamento,
-    castrado: form.castrado,
     pesoAtualKg: numeroOpcional(form.pesoAtualKg),
     dataAcolhimento: dateOrUndefined(form.dataAcolhimento),
     dataNascimento: dateOrUndefined(form.dataNascimento),
@@ -1111,7 +1100,6 @@ function payloadAtualizacao(form: AnimalFormState, racaId: number | undefined): 
     corPelagem: form.corPelagem.trim() || null,
     situacao: form.situacao,
     emIsolamento: form.emIsolamento,
-    castrado: form.castrado,
     pesoAtualKg: numeroOuNull(form.pesoAtualKg),
     dataAcolhimento: dateOrNull(form.dataAcolhimento),
     dataNascimento: dateOrNull(form.dataNascimento),
@@ -1244,11 +1232,12 @@ function temFiltrosAtivos(filtros: ListarAnimaisFiltros) {
       filtros.sexo ||
       filtros.porte ||
       filtros.situacao ||
-      filtros.castrado ||
       filtros.baiaId ||
       filtros.semBaia ||
       filtros.comAlertas ||
-      filtros.incluirTerminais,
+      filtros.incluirTerminais ||
+      filtros.adotadaDe ||
+      filtros.adotadaAte,
   );
 }
 
@@ -1259,12 +1248,31 @@ function chipsFiltro(filtros: ListarAnimaisFiltros, baias: Baia[]) {
   if (filtros.situacao) chips.push(situacaoLabel[filtros.situacao]);
   if (filtros.sexo) chips.push(sexoLabel[filtros.sexo]);
   if (filtros.porte) chips.push(porteLabel[filtros.porte]);
-  if (filtros.castrado) chips.push(castradoLabel[filtros.castrado]);
   if (filtros.semBaia) chips.push("Sem baia");
   else if (filtros.baiaId) chips.push(baias.find((baia) => baia.id === filtros.baiaId)?.codigo ?? `Baia ${filtros.baiaId}`);
   if (filtros.comAlertas) chips.push("Com alertas");
+  if (filtros.adotadaDe) chips.push(`Adoção desde ${filtros.adotadaDe}`);
+  if (filtros.adotadaAte) chips.push(`Adoção até ${filtros.adotadaAte}`);
   if (filtros.incluirTerminais) chips.push("Incluir terminais");
   return chips;
+}
+
+function filtrosDaUrl(params: ReturnType<typeof useSearchParams>): ListarAnimaisFiltros {
+  const situacao = params.get("situacao") as SituacaoAnimal | null;
+  const baiaIdRaw = params.get("baiaId");
+  const baiaId = baiaIdRaw && /^\d+$/.test(baiaIdRaw) && Number(baiaIdRaw) > 0 ? Number(baiaIdRaw) : undefined;
+  const adotadaDe = params.get("adotadaDe") || undefined;
+  const adotadaAte = params.get("adotadaAte") || undefined;
+  const incluirTerminais = params.get("incluirTerminais") === "true" || Boolean(adotadaDe || adotadaAte);
+  return {
+    pagina: 1,
+    limite: 12,
+    situacao: situacao && situacoes.includes(situacao) ? situacao : undefined,
+    baiaId,
+    adotadaDe,
+    adotadaAte,
+    incluirTerminais: incluirTerminais || undefined,
+  };
 }
 
 function AnimaisSkeleton() {

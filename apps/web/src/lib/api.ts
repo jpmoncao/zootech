@@ -1,3 +1,27 @@
+export type Dashboard = {
+  atualizadoEm: string;
+  plantel: { animaisAtivos: number; animaisAlojados: number; disponiveisAdocao: number };
+  acompanhamentoClinico: { emTratamento: number; emQuarentena: number };
+  pendencias: {
+    castracoesAgendadas: number;
+    vacinas: { estado: "futura_implementacao"; mensagem: string };
+  };
+  ocupacao: {
+    baiasAtivas: { baiaId: number; codigo: string; ocupantes: number; capacidade: number; estado: "ativa" }[];
+    irregulares: { animalAtivoEmBaiaNaoAtiva: number; animalTerminalAlocado: number };
+  };
+  adocoes: {
+    mesAtual: { inicio: string; fim: string; total: number };
+    mesAnterior: { inicio: string; fim: string; total: number };
+    variacaoAbsoluta: number;
+    variacaoPercentual: number | null;
+  };
+};
+
+export function obterDashboard(): Promise<Dashboard> {
+  return request<Dashboard>("/dashboard", { method: "GET" });
+}
+
 export type PerfilAcesso = "coordenacao" | "veterinario" | "agente" | "recepcao";
 
 export type PublicUser = {
@@ -32,10 +56,18 @@ export type AcaoBaia =
 
 export type BaiaOcupante = {
   id: number;
-  nome?: string;
-  codigo?: string;
-  especie?: string;
-  emIsolamento?: boolean;
+  nome: string;
+  numeroRegistro: string;
+  especie: EspecieAnimal;
+  sexo: SexoAnimal;
+  situacao: SituacaoAnimal;
+  emIsolamento: boolean;
+  idadeAproximada: boolean;
+  raca: Pick<RacaAnimal, "nome" | "tipo"> | null;
+  fotos: Pick<FotoAnimal, "id" | "url" | "identificacao">[];
+  castracoes: Pick<CastracaoAnimal, "id" | "tipo" | "estado" | "dataHoraPlanejada" | "dataEfetiva" | "dataEfetivaTemHora" | "createdAt">[];
+  estadoCastracao: StatusCastracaoAnimal;
+  alertas: AnimalAlerta[];
 };
 
 export type Baia = {
@@ -86,6 +118,13 @@ export type BaiaHistoricoEvento = {
   usuarioId: number | null;
   createdAt: string;
   usuario: Pick<PublicUser, "id" | "nome"> | null;
+  movimentacao?: {
+    direcao: "entrada" | "saida";
+    animalId: number;
+    animal: { id: number; nome: string; numeroRegistro: string; especie: EspecieAnimal } | null;
+    baiaRelacionada: { id: number; codigo: string } | null;
+    observacao: string | null;
+  };
 };
 
 export type EspecieAnimal = "cao" | "gato";
@@ -99,7 +138,10 @@ export type SituacaoAnimal =
   | "saudavel"
   | "adotado"
   | "obito";
-export type StatusCastracaoAnimal = "sim" | "nao" | "nao_informado";
+export type TipoCastracaoAnimal = "avaliacao" | "procedimento";
+export type EstadoCastracaoAnimal = "nao_castrado" | "agendada" | "realizada" | "cancelada";
+export type OrigemCastracaoAnimal = "fluxo" | "legada";
+export type StatusCastracaoAnimal = EstadoCastracaoAnimal | "nao_informado";
 export type UnidadeIdadeAnimal = "dias" | "meses" | "anos";
 export type TipoEventoAnimal =
   | "criacao"
@@ -113,6 +155,7 @@ export type TipoEventoAnimal =
   | "exame"
   | "diagnostico"
   | "revogacao_situacao_terminal"
+  | "castracao"
   | "aplicacao_vacina"
   | "edicao_aplicacao_vacina"
   | "anulacao_aplicacao_vacina"
@@ -154,6 +197,24 @@ export type FotoAnimal = {
   ordem: number;
   createdAt: string;
   url: string;
+};
+
+export type CastracaoAnimal = {
+  id: number;
+  animalId: number;
+  tipo: TipoCastracaoAnimal;
+  estado: EstadoCastracaoAnimal;
+  origem: OrigemCastracaoAnimal;
+  dataHoraPlanejada: string | null;
+  dataEfetiva: string | null;
+  dataEfetivaTemHora: boolean;
+  dataAvaliacao: string | null;
+  observacao: string | null;
+  motivoCancelamento: string | null;
+  usuarioId: number | null;
+  createdAt: string;
+  updatedAt: string;
+  usuario?: Pick<PublicUser, "id" | "nome"> | null;
 };
 
 export type PesagemAnimal = {
@@ -199,7 +260,7 @@ export type Animal = {
   corPelagem: string | null;
   situacao: SituacaoAnimal;
   emIsolamento: boolean;
-  castrado: StatusCastracaoAnimal;
+  estadoCastracao: StatusCastracaoAnimal;
   pesoAtualKg: string | null;
   dataAcolhimento: string | null;
   dataNascimento: string | null;
@@ -216,6 +277,7 @@ export type Animal = {
   baia: Baia | null;
   criadoPor: Pick<PublicUser, "id" | "nome"> | null;
   fotos: FotoAnimal[];
+  castracoes?: CastracaoAnimal[];
   somenteLeitura: boolean;
   alertas: AnimalAlerta[];
   pesagens?: PesagemAnimal[];
@@ -225,6 +287,7 @@ export type Animal = {
   reacoesAdversas?: ReacaoAdversa[];
   /** Só na ficha, e só enquanto a situação é `em_observacao_antirrabica`. */
   observacaoAntirrabica?: ObservacaoAntirrabica | null;
+  adocoes?: Adocao[];
 };
 
 export type ListarAnimaisFiltros = {
@@ -233,11 +296,12 @@ export type ListarAnimaisFiltros = {
   sexo?: SexoAnimal;
   porte?: PorteAnimal;
   situacao?: SituacaoAnimal;
-  castrado?: StatusCastracaoAnimal;
   baiaId?: number;
   semBaia?: boolean;
   comAlertas?: boolean;
   incluirTerminais?: boolean;
+  adotadaDe?: string;
+  adotadaAte?: string;
   pagina?: number;
   limite?: number;
 };
@@ -259,7 +323,6 @@ export type CriarAnimalInput = {
   corPelagem?: string;
   situacao?: Exclude<SituacaoAnimal, "adotado">;
   emIsolamento?: boolean;
-  castrado?: StatusCastracaoAnimal;
   pesoAtualKg?: number;
   dataAcolhimento?: string;
   dataNascimento?: string;
@@ -311,6 +374,141 @@ export type AlocarAnimalInput = {
 
 export type RevogarSituacaoAnimalInput = {
   situacao: Extract<SituacaoAnimal, "em_tratamento" | "em_quarentena_observacao" | "em_observacao_antirrabica" | "saudavel">;
+  motivo: string;
+};
+
+export type MidiaTutor = {
+  id: number;
+  tutorId?: number;
+  mimeType: string;
+  tamanhoBytes: number;
+  createdAt: string;
+  url: string;
+};
+
+export type Tutor = {
+  id: number;
+  nome: string;
+  cpf: string;
+  telefone: string;
+  email: string | null;
+  tipoDocumento: string;
+  numeroDocumento: string;
+  cep: string;
+  logradouro: string;
+  numero: string;
+  complemento: string | null;
+  bairro: string;
+  cidade: string;
+  uf: string;
+  criadoPorId: number | null;
+  atualizadoPorId: number | null;
+  createdAt: string;
+  updatedAt: string;
+  foto?: Omit<MidiaTutor, "url"> | null;
+  documentos?: Array<Omit<MidiaTutor, "url">>;
+};
+
+export type CriarTutorInput = Omit<Tutor, "id" | "criadoPorId" | "atualizadoPorId" | "createdAt" | "updatedAt" | "foto" | "documentos" | "email" | "complemento"> & {
+  email?: string;
+  complemento?: string;
+};
+export type AtualizarTutorInput = Partial<CriarTutorInput>;
+
+export type LiberacaoAdocao = {
+  id: number;
+  animalId: number;
+  justificativa: string;
+  autorizadaPorId: number | null;
+  autorizadaEm: string;
+  consumidaEm: string | null;
+  createdAt: string;
+};
+
+export type DevolucaoAdocao = {
+  id: number;
+  adocaoId: number;
+  motivo: string;
+  situacaoRetorno: Extract<SituacaoAnimal, "em_tratamento" | "em_quarentena_observacao" | "saudavel">;
+  baiaId: number | null;
+  recebidaPorId: number | null;
+  recebidaEm: string;
+  createdAt: string;
+  recebidaPor?: Pick<PublicUser, "id" | "nome"> | null;
+  baia?: Pick<Baia, "id" | "codigo"> | null;
+};
+
+export type Adocao = {
+  id: number;
+  animalId: number;
+  tutorId: number;
+  liberacaoId: number | null;
+  consentiuTratamento: boolean;
+  consentiuAcompanhamento: boolean;
+  adotadaPorId: number | null;
+  adotadaEm: string;
+  encerradaEm: string | null;
+  createdAt: string;
+  tutor?: Tutor;
+  adotadaPor?: Pick<PublicUser, "id" | "nome"> | null;
+  liberacao?: LiberacaoAdocao & { autorizadaPor?: Pick<PublicUser, "id" | "nome"> | null };
+  devolucao?: DevolucaoAdocao | null;
+  assinaturaUrl?: string;
+};
+
+export type ConcluirAdocaoInput = {
+  tutorId: number;
+  consentiuTratamento: boolean;
+  consentiuAcompanhamento: boolean;
+  assinatura: File;
+};
+
+export type RegistrarDevolucaoInput = {
+  motivo: string;
+  situacaoRetorno: DevolucaoAdocao["situacaoRetorno"];
+  baiaId?: number | null;
+};
+
+export type ListarCastracoesFiltros = {
+  estado?: Extract<EstadoCastracaoAnimal, "agendada" | "realizada" | "cancelada">;
+  de?: string;
+  ate?: string;
+  busca?: string;
+  pagina?: number;
+  limite?: number;
+};
+
+export type CastracaoAgendaItem = CastracaoAnimal & {
+  animal: Pick<Animal, "id" | "nome" | "numeroRegistro" | "especie" | "situacao"> & {
+    baia: Pick<Baia, "id" | "codigo"> | null;
+  };
+};
+
+export type ListaCastracoes = { itens: CastracaoAgendaItem[]; total: number; pagina: number; limite: number };
+
+export type CastracaoAgendamentoInput = {
+  dataHoraPlanejada: string;
+  observacao?: string;
+};
+
+export type CastracaoAvaliacaoInput = {
+  dataAvaliacao?: string;
+  observacao?: string;
+};
+
+export type CastracaoLegadaInput = {
+  dataEfetiva?: string;
+  dataEfetivaTemHora?: boolean;
+  observacao?: string;
+};
+
+export type ConcluirCastracaoInput = {
+  dataEfetiva: string;
+  dataEfetivaTemHora?: boolean;
+  observacao?: string;
+};
+
+export type CancelarCastracaoInput = {
   motivo: string;
 };
 
@@ -520,11 +718,12 @@ export function listarAnimais(filtros: ListarAnimaisFiltros = {}): Promise<Lista
   if (filtros.sexo) params.set("sexo", filtros.sexo);
   if (filtros.porte) params.set("porte", filtros.porte);
   if (filtros.situacao) params.set("situacao", filtros.situacao);
-  if (filtros.castrado) params.set("castrado", filtros.castrado);
   if (filtros.baiaId) params.set("baiaId", String(filtros.baiaId));
   if (filtros.semBaia) params.set("semBaia", "true");
   if (filtros.comAlertas) params.set("comAlertas", "true");
   if (filtros.incluirTerminais) params.set("incluirTerminais", "true");
+  if (filtros.adotadaDe) params.set("adotadaDe", filtros.adotadaDe);
+  if (filtros.adotadaAte) params.set("adotadaAte", filtros.adotadaAte);
   if (filtros.pagina) params.set("pagina", String(filtros.pagina));
   if (filtros.limite) params.set("limite", String(filtros.limite));
   const query = params.toString();
@@ -600,6 +799,72 @@ export function adicionarFotoAnimal(id: number, foto: File): Promise<FotoAnimal>
     method: "POST",
     body,
   });
+}
+
+export function listarTutores(busca?: string): Promise<Tutor[]> {
+  const query = busca?.trim() ? `?busca=${encodeURIComponent(busca.trim())}` : "";
+  return request<Tutor[]>(`/tutores${query}`, { method: "GET" });
+}
+
+export function obterTutor(id: number): Promise<Tutor> {
+  return request<Tutor>(`/tutores/${id}`, { method: "GET" });
+}
+
+export function buscarTutorPorCpf(cpf: string): Promise<Tutor> {
+  return request<Tutor>(`/tutores/cpf/${encodeURIComponent(cpf)}`, { method: "GET" });
+}
+
+export function criarTutor(input: CriarTutorInput): Promise<Tutor> {
+  return request<Tutor>("/tutores", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function atualizarTutor(id: number, input: AtualizarTutorInput): Promise<Tutor> {
+  return request<Tutor>(`/tutores/${id}`, { method: "PATCH", body: JSON.stringify(input) });
+}
+
+export function adicionarFotoTutor(id: number, arquivo: File): Promise<MidiaTutor> {
+  return adicionarMidiaTutor(id, "foto", arquivo);
+}
+
+export function adicionarDocumentoTutor(id: number, arquivo: File): Promise<MidiaTutor> {
+  return adicionarMidiaTutor(id, "documentos", arquivo);
+}
+
+function adicionarMidiaTutor(id: number, tipo: "foto" | "documentos", arquivo: File): Promise<MidiaTutor> {
+  const body = new FormData();
+  body.set("arquivo", arquivo);
+  return request<MidiaTutor>(`/tutores/${id}/midia/${tipo}`, { method: "POST", body });
+}
+
+export async function carregarMidiaTutor(midia: Pick<MidiaTutor, "url">): Promise<Blob> {
+  return requestBlob(midia.url);
+}
+
+export function liberarAnimalParaAdocao(animalId: number, justificativa: string): Promise<LiberacaoAdocao> {
+  return request<LiberacaoAdocao>(`/animais/${animalId}/adocoes/liberacao`, {
+    method: "POST",
+    body: JSON.stringify({ justificativa }),
+  });
+}
+
+export function concluirAdocao(animalId: number, input: ConcluirAdocaoInput): Promise<Adocao> {
+  const body = new FormData();
+  body.set("tutorId", String(input.tutorId));
+  body.set("consentiuTratamento", String(input.consentiuTratamento));
+  body.set("consentiuAcompanhamento", String(input.consentiuAcompanhamento));
+  body.set("assinatura", input.assinatura, input.assinatura.name || "assinatura.png");
+  return request<Adocao>(`/animais/${animalId}/adocoes`, { method: "POST", body });
+}
+
+export function registrarDevolucao(animalId: number, input: RegistrarDevolucaoInput): Promise<DevolucaoAdocao> {
+  return request<DevolucaoAdocao>(`/animais/${animalId}/adocoes/devolucao`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function carregarAssinaturaAdocao(animalId: number, adocaoId: number): Promise<Blob> {
+  return requestBlob(`/animais/${animalId}/adocoes/assinatura/${adocaoId}`);
 }
 
 export function removerFotoAnimal(id: number, fotoId: number): Promise<{ ok: true }> {
@@ -1028,6 +1293,64 @@ export function baixarAgendamento(
 }> {
   return request(`/vacinacao/agendamentos/${id}/baixa`, { method: "POST", body: JSON.stringify(input) });
 }
+
+export function listarCastracoesAnimal(animalId: number): Promise<CastracaoAnimal[]> {
+  return request<CastracaoAnimal[]>(`/animais/${animalId}/castracoes`, { method: "GET" });
+}
+
+export function listarAgendaCastracoes(filtros: ListarCastracoesFiltros = {}): Promise<ListaCastracoes> {
+  const params = new URLSearchParams();
+  if (filtros.estado) params.set("estado", filtros.estado);
+  if (filtros.de) params.set("de", filtros.de);
+  if (filtros.ate) params.set("ate", filtros.ate);
+  if (filtros.busca?.trim()) params.set("busca", filtros.busca.trim());
+  if (filtros.pagina) params.set("pagina", String(filtros.pagina));
+  if (filtros.limite) params.set("limite", String(filtros.limite));
+  return request<ListaCastracoes>(`/animais/castracoes?${params.toString()}`, { method: "GET" });
+}
+
+export function avaliarCastracaoAnimal(animalId: number, input: CastracaoAvaliacaoInput): Promise<CastracaoAnimal> {
+  return request<CastracaoAnimal>(`/animais/${animalId}/castracoes/avaliacoes`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function registrarCastracaoLegadaAnimal(animalId: number, input: CastracaoLegadaInput): Promise<CastracaoAnimal> {
+  return request<CastracaoAnimal>(`/animais/${animalId}/castracoes/legado-realizado`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function agendarCastracaoAnimal(animalId: number, input: CastracaoAgendamentoInput): Promise<CastracaoAnimal> {
+  return request<CastracaoAnimal>(`/animais/${animalId}/castracoes/agendamentos`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function reagendarCastracaoAnimal(animalId: number, castracaoId: number, input: CastracaoAgendamentoInput): Promise<CastracaoAnimal> {
+  return request<CastracaoAnimal>(`/animais/${animalId}/castracoes/${castracaoId}/reagendar`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function concluirCastracaoAnimal(animalId: number, castracaoId: number, input: ConcluirCastracaoInput): Promise<CastracaoAnimal> {
+  return request<CastracaoAnimal>(`/animais/${animalId}/castracoes/${castracaoId}/concluir`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function cancelarCastracaoAnimal(animalId: number, castracaoId: number, input: CancelarCastracaoInput): Promise<CastracaoAnimal> {
+  return request<CastracaoAnimal>(`/animais/${animalId}/castracoes/${castracaoId}/cancelar`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
 
 export function animalFotoUrl(foto: Pick<FotoAnimal, "url">): string {
   return `${API_URL}${foto.url}`;

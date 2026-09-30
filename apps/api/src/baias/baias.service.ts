@@ -7,6 +7,7 @@ import {
 import { Prisma, EstadoBaia } from "@prisma/client";
 import type { AuthUser } from "../auth/decorators/current-user.decorator";
 import { PrismaService } from "../prisma/prisma.service";
+import { estadoCastracaoAnimal } from "../animais/estado-castracao";
 import { AcaoBaiaDto } from "./dto/acao-baia.dto";
 import { CreateBaiaDto } from "./dto/create-baia.dto";
 import { ListBaiasDto } from "./dto/list-baias.dto";
@@ -18,8 +19,13 @@ const OCUPANTE_SELECT = {
   nome: true,
   numeroRegistro: true,
   especie: true,
+  sexo: true,
   situacao: true,
   emIsolamento: true,
+  idadeAproximada: true,
+  raca: { select: { nome: true, tipo: true } },
+  fotos: { select: { id: true, identificacao: true }, orderBy: [{ identificacao: "desc" }, { ordem: "asc" }, { id: "asc" }] },
+  castracoes: { select: { id: true, tipo: true, estado: true, dataHoraPlanejada: true, dataEfetiva: true, dataEfetivaTemHora: true, createdAt: true }, orderBy: [{ createdAt: "desc" }, { id: "desc" }] },
 } satisfies Prisma.AnimalSelect;
 
 type BaiaComOcupantes = Prisma.BaiaGetPayload<{ include: { animais: { select: typeof OCUPANTE_SELECT } } }>;
@@ -37,7 +43,17 @@ export class BaiasService {
   private view(baia: BaiaComOcupantes) {
     const ocupacao = baia.animais.length;
     const { animais, ...dados } = baia;
-    return { ...dados, ocupantes: animais, ocupacao, vagasDisponiveis: Math.max(baia.capacidade - ocupacao, 0) };
+    const ocupantes = animais.map((animal) => ({
+      ...animal,
+      estadoCastracao: estadoCastracaoAnimal(animal.castracoes),
+      alertas: [
+        ...(animal.sexo === "nao_informado" ? [{ tipo: "sexo_nao_informado", mensagem: "Sexo não informado." }] : []),
+        ...(!animal.raca || animal.raca.tipo === "nao_informada" ? [{ tipo: "raca_nao_informada", mensagem: "Raça não informada." }] : []),
+        ...(animal.idadeAproximada ? [{ tipo: "idade_aproximada", mensagem: "Idade aproximada." }] : []),
+      ],
+      fotos: animal.fotos.map((foto) => ({ ...foto, url: `/animais/${animal.id}/fotos/${foto.id}/arquivo` })),
+    }));
+    return { ...dados, ocupantes, ocupacao, vagasDisponiveis: Math.max(baia.capacidade - ocupacao, 0) };
   }
 
   async listar(filtros: ListBaiasDto) {
@@ -66,14 +82,52 @@ export class BaiasService {
   async historico(id: number) {
     await this.exists(id);
     const eventos = await this.prisma.auditoriaEvento.findMany({
-      where: { AND: [
-        { dados: { path: ["entidade"], equals: "baia" } },
-        { dados: { path: ["entidadeId"], equals: String(id) } },
+      where: { OR: [
+        { AND: [
+          { dados: { path: ["entidade"], equals: "baia" } },
+          { dados: { path: ["entidadeId"], equals: String(id) } },
+        ] },
+        { tipo: "animal_baia_alterada", dados: { path: ["baiaOrigemId"], equals: id } },
+        { tipo: "animal_baia_alterada", dados: { path: ["baiaDestinoId"], equals: id } },
+        { tipo: "animal_adocao_concluida", dados: { path: ["baiaAnteriorId"], equals: id } },
+        { tipo: "animal_devolucao_registrada", dados: { path: ["baiaDestinoId"], equals: id } },
       ] },
       include: { usuario: { select: { id: true, nome: true } } },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     });
-    return eventos;
+
+    const dadosMovimento = eventos
+      .filter((evento) => evento.tipo.startsWith("animal_"))
+      .map((evento) => ({ evento, dados: evento.dados as Record<string, unknown> }));
+    const animalIds = dadosMovimento.map(({ dados }) => Number(dados.entidadeId)).filter(Number.isInteger);
+    const baiaIds = dadosMovimento.flatMap(({ dados }) => [dados.baiaOrigemId, dados.baiaDestinoId, dados.baiaAnteriorId])
+      .filter((valor): valor is number => typeof valor === "number");
+    const [animais, baias] = await Promise.all([
+      this.prisma.animal.findMany({ where: { id: { in: animalIds } }, select: { id: true, nome: true, numeroRegistro: true, especie: true } }),
+      this.prisma.baia.findMany({ where: { id: { in: baiaIds } }, select: { id: true, codigo: true } }),
+    ]);
+    const animaisPorId = new Map(animais.map((animal) => [animal.id, animal]));
+    const baiasPorId = new Map(baias.map((baia) => [baia.id, baia]));
+
+    return eventos.map((evento) => {
+      if (!evento.tipo.startsWith("animal_") || !evento.dados || typeof evento.dados !== "object" || Array.isArray(evento.dados)) return evento;
+      const dados = evento.dados as Record<string, unknown>;
+      const origemId = evento.tipo === "animal_adocao_concluida" ? dados.baiaAnteriorId : dados.baiaOrigemId;
+      const destinoId = evento.tipo === "animal_adocao_concluida" ? null : dados.baiaDestinoId;
+      const direcao = destinoId === id ? "entrada" : "saida";
+      const outraBaiaId = direcao === "entrada" ? origemId : destinoId;
+      const animalId = Number(dados.entidadeId);
+      return {
+        ...evento,
+        movimentacao: {
+          direcao,
+          animalId,
+          animal: animaisPorId.get(animalId) ?? null,
+          baiaRelacionada: typeof outraBaiaId === "number" ? baiasPorId.get(outraBaiaId) ?? null : null,
+          observacao: typeof dados.observacao === "string" ? dados.observacao : typeof dados.motivo === "string" ? dados.motivo : null,
+        },
+      };
+    });
   }
 
   async criar(dto: CreateBaiaDto, ator: AuthUser) {
