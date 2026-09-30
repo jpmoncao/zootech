@@ -10,6 +10,7 @@ import * as bcrypt from "bcrypt";
 import sharp from "sharp";
 import request from "supertest";
 import { AppModule } from "../app.module";
+import { addDias, formatDataCivil, hojeCivil } from "../vacinacao/datas";
 import { AnimaisService } from "./animais.service";
 
 loadLocalEnv(resolve(__dirname, "../../.env"));
@@ -983,6 +984,881 @@ describe("animais", () => {
       .expect(400);
   });
 
+  it("grava e limpa o início da observação antirrábica, reiniciando ao recolocar", async () => {
+    const token = tokens.get("coordenacao")!;
+    const animal = await criarAnimal(token);
+    expect((await prisma.animal.findUniqueOrThrow({ where: { id: animal.id } })).observacaoAntirrabicaInicioEm).toBeNull();
+
+    const entrou = await patchAnimal(animal.id, token, { situacao: "em_observacao_antirrabica" });
+    expect(entrou.body.situacao).toBe("em_observacao_antirrabica");
+    expect(entrou.body.observacaoAntirrabica).toMatchObject({
+      periodoDias: 10,
+      diasDecorridos: 0,
+      diasRestantes: 10,
+      vencida: false,
+    });
+    expect((await prisma.animal.findUniqueOrThrow({ where: { id: animal.id } })).observacaoAntirrabicaInicioEm).not.toBeNull();
+
+    // Todos os perfis podem colocar e tirar o animal da situação.
+    const saiu = await patchAnimal(animal.id, tokens.get("agente")!, { situacao: "em_tratamento" });
+    expect(saiu.body.observacaoAntirrabica).toBeNull();
+    expect((await prisma.animal.findUniqueOrThrow({ where: { id: animal.id } })).observacaoAntirrabicaInicioEm).toBeNull();
+
+    await prisma.animal.update({
+      where: { id: animal.id },
+      data: { situacao: "em_observacao_antirrabica", observacaoAntirrabicaInicioEm: diasAtras(4) },
+    });
+    const revisita = await request(app.getHttpServer()).get(`/animais/${animal.id}`).set(auth(token)).expect(200);
+    expect(revisita.body.observacaoAntirrabica).toMatchObject({ diasDecorridos: 4, diasRestantes: 6, vencida: false });
+
+    // Recolocar reinicia a contagem; o período anterior fica no histórico, não no campo.
+    await patchAnimal(animal.id, token, { situacao: "saudavel" });
+    await patchAnimal(animal.id, token, { situacao: "em_observacao_antirrabica" });
+    const reiniciado = await request(app.getHttpServer()).get(`/animais/${animal.id}`).set(auth(token)).expect(200);
+    expect(reiniciado.body.observacaoAntirrabica.diasDecorridos).toBe(0);
+
+    const eventos = await prisma.eventoAnimal.findMany({ where: { animalId: animal.id, tipo: "mudanca_situacao" } });
+    expect(eventos.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("marca a observação antirrábica como vencida depois de 10 dias", async () => {
+    const token = tokens.get("veterinario")!;
+    const animal = await criarAnimal(token);
+    await prisma.animal.update({
+      where: { id: animal.id },
+      data: { situacao: "em_observacao_antirrabica", observacaoAntirrabicaInicioEm: diasAtras(13) },
+    });
+
+    const ficha = await request(app.getHttpServer()).get(`/animais/${animal.id}`).set(auth(token)).expect(200);
+    expect(ficha.body.observacaoAntirrabica).toMatchObject({
+      diasDecorridos: 13,
+      diasRestantes: 0,
+      vencida: true,
+      periodoDias: 10,
+    });
+
+    // No décimo dia já está vencida: o período terminou.
+    await prisma.animal.update({ where: { id: animal.id }, data: { observacaoAntirrabicaInicioEm: diasAtras(10) } });
+    const noDia10 = await request(app.getHttpServer()).get(`/animais/${animal.id}`).set(auth(token)).expect(200);
+    expect(noDia10.body.observacaoAntirrabica).toMatchObject({ diasDecorridos: 10, diasRestantes: 0, vencida: true });
+
+    await prisma.animal.update({ where: { id: animal.id }, data: { observacaoAntirrabicaInicioEm: diasAtras(9) } });
+    const noDia9 = await request(app.getHttpServer()).get(`/animais/${animal.id}`).set(auth(token)).expect(200);
+    expect(noDia9.body.observacaoAntirrabica).toMatchObject({ diasRestantes: 1, vencida: false });
+  });
+
+  it("encerra a observação antirrábica exigindo conclusão escrita e nova situação", async () => {
+    const token = tokens.get("recepcao")!;
+    const animal = await criarAnimal(token);
+    const url = `/animais/${animal.id}/encerrar-observacao-antirrabica`;
+
+    // Fora da situação, não há o que encerrar.
+    const foraDaSituacao = await request(app.getHttpServer())
+      .post(url)
+      .set(auth(token))
+      .send({ observacaoFinal: "x", situacao: "saudavel" })
+      .expect(409);
+    expect(foraDaSituacao.body.message).toMatch(/observação antirrábica/i);
+
+    await prisma.animal.update({
+      where: { id: animal.id },
+      data: { situacao: "em_observacao_antirrabica", observacaoAntirrabicaInicioEm: diasAtras(12) },
+    });
+
+    for (const corpo of [
+      {},
+      { observacaoFinal: "sem sinais" },
+      { situacao: "saudavel" },
+      { observacaoFinal: "   ", situacao: "saudavel" },
+      { observacaoFinal: "sem sinais", situacao: "adotado" },
+      { observacaoFinal: "sem sinais", situacao: "em_observacao_antirrabica" },
+    ]) {
+      await request(app.getHttpServer()).post(url).set(auth(token)).send(corpo).expect(400);
+    }
+    expect((await prisma.animal.findUniqueOrThrow({ where: { id: animal.id } })).situacao).toBe("em_observacao_antirrabica");
+
+    const encerrado = await request(app.getHttpServer())
+      .post(url)
+      .set(auth(token))
+      .send({ observacaoFinal: "  Sem   sinais neurologicos em 10 dias. ", situacao: "saudavel" })
+      .expect(201);
+
+    expect(encerrado.body.situacao).toBe("saudavel");
+    expect(encerrado.body.observacaoAntirrabica).toBeNull();
+    expect(encerrado.body.observacoes[0].texto).toBe("Sem sinais neurologicos em 10 dias.");
+    expect((await prisma.animal.findUniqueOrThrow({ where: { id: animal.id } })).observacaoAntirrabicaInicioEm).toBeNull();
+
+    const evento = await prisma.eventoAnimal.findFirstOrThrow({
+      where: { animalId: animal.id, tipo: "encerramento_observacao_antirrabica" },
+    });
+    expect(evento.dados).toMatchObject({
+      situacaoAnterior: "em_observacao_antirrabica",
+      situacaoNova: "saudavel",
+      diasDecorridos: 12,
+      periodoDias: 10,
+      antecipado: false,
+    });
+    expect(evento.usuarioId).toBe(usuarios.get("recepcao")!.id);
+
+    const auditoria = await prisma.auditoriaEvento.findFirstOrThrow({
+      where: { tipo: "animal_observacao_antirrabica_encerrada", usuarioId: usuarios.get("recepcao")!.id },
+    });
+    expect((auditoria.dados as { entidadeId: string }).entidadeId).toBe(String(animal.id));
+
+    // Encerrar duas vezes não é possível.
+    await request(app.getHttpServer()).post(url).set(auth(token)).send({ observacaoFinal: "y", situacao: "saudavel" }).expect(409);
+  });
+
+  it("marca como antecipado o encerramento dentro dos 10 dias e aceita óbito como desfecho", async () => {
+    const token = tokens.get("veterinario")!;
+    const animal = await criarAnimal(token);
+    await prisma.animal.update({
+      where: { id: animal.id },
+      data: { situacao: "em_observacao_antirrabica", observacaoAntirrabicaInicioEm: diasAtras(3) },
+    });
+
+    const encerrado = await request(app.getHttpServer())
+      .post(`/animais/${animal.id}/encerrar-observacao-antirrabica`)
+      .set(auth(token))
+      .send({ observacaoFinal: "Evoluiu para obito no terceiro dia.", situacao: "obito" })
+      .expect(201);
+    expect(encerrado.body.situacao).toBe("obito");
+    expect(encerrado.body.somenteLeitura).toBe(true);
+
+    const evento = await prisma.eventoAnimal.findFirstOrThrow({
+      where: { animalId: animal.id, tipo: "encerramento_observacao_antirrabica" },
+    });
+    expect(evento.dados).toMatchObject({ diasDecorridos: 3, antecipado: true, situacaoNova: "obito" });
+    expect(evento.resumo).toMatch(/antecipada/);
+  });
+
+  it("bloqueia encerrar observação de animal em situação terminal", async () => {
+    const token = tokens.get("coordenacao")!;
+    const animal = await criarAnimal(token);
+    await prisma.animal.update({
+      where: { id: animal.id },
+      data: { situacao: "obito", observacaoAntirrabicaInicioEm: diasAtras(5) },
+    });
+    await request(app.getHttpServer())
+      .post(`/animais/${animal.id}/encerrar-observacao-antirrabica`)
+      .set(auth(token))
+      .send({ observacaoFinal: "x", situacao: "saudavel" })
+      .expect(409);
+  });
+
+  it("limpa o período quando a coordenação revoga situação terminal e reinicia se voltar para a observação", async () => {
+    const token = tokens.get("coordenacao")!;
+    const animal = await criarAnimal(token);
+    await prisma.animal.update({
+      where: { id: animal.id },
+      data: { situacao: "obito", observacaoAntirrabicaInicioEm: diasAtras(5) },
+    });
+
+    const revogado = await request(app.getHttpServer())
+      .post(`/animais/${animal.id}/revogar-situacao`)
+      .set(auth(token))
+      .send({ situacao: "saudavel", motivo: "lancado no animal errado" })
+      .expect(201);
+    expect(revogado.body.situacao).toBe("saudavel");
+    expect((await prisma.animal.findUniqueOrThrow({ where: { id: animal.id } })).observacaoAntirrabicaInicioEm).toBeNull();
+
+    // Revogar direto para a observação antirrábica reinicia a contagem.
+    await prisma.animal.update({ where: { id: animal.id }, data: { situacao: "adotado" } });
+    const paraObservacao = await request(app.getHttpServer())
+      .post(`/animais/${animal.id}/revogar-situacao`)
+      .set(auth(token))
+      .send({ situacao: "em_observacao_antirrabica", motivo: "adocao lancada por engano" })
+      .expect(201);
+    expect(paraObservacao.body.observacaoAntirrabica).toMatchObject({ diasDecorridos: 0, vencida: false });
+  });
+
+  it("registra reação adversa ligada à aplicação, por qualquer perfil autenticado", async () => {
+    const animal = await criarAnimal(tokens.get("coordenacao")!);
+    const aplicacaoId = await aplicarVacina(animal.id);
+
+    const evento = await request(app.getHttpServer())
+      .post(`/animais/${animal.id}/eventos`)
+      .set(auth(tokens.get("agente")!))
+      .send({
+        tipo: "reacao_adversa",
+        resumo: "Inchaco no local e prostracao",
+        gravidadeReacao: "moderada",
+        desfechoReacao: "em_acompanhamento",
+        aplicacaoVacinaId: aplicacaoId,
+      })
+      .expect(201);
+
+    expect(evento.body).toMatchObject({
+      tipo: "reacao_adversa",
+      gravidadeReacao: "moderada",
+      desfechoReacao: "em_acompanhamento",
+      aplicacaoVacinaId: aplicacaoId,
+      eventoOrigemId: null,
+    });
+    expect(evento.body.usuarioId).toBe(usuarios.get("agente")!.id);
+
+    const ficha = await request(app.getHttpServer()).get(`/animais/${animal.id}`).set(auth(tokens.get("recepcao")!)).expect(200);
+    expect(ficha.body.reacoesAdversas).toHaveLength(1);
+    expect(ficha.body.reacoesAdversas[0]).toMatchObject({
+      id: evento.body.id,
+      gravidade: "moderada",
+      desfecho: "em_acompanhamento",
+      emAcompanhamento: true,
+      aplicacaoVacinaId: aplicacaoId,
+      atualizacoes: [],
+    });
+
+    const auditoria = await prisma.auditoriaEvento.findFirstOrThrow({
+      where: { tipo: "animal_reacao_adversa_registrado", usuarioId: usuarios.get("agente")!.id },
+    });
+    expect(auditoria.dados).toMatchObject({ gravidadeReacao: "moderada", atualizacaoDeDesfecho: false });
+  });
+
+  it("aceita reação adversa sem aplicação e recusa aplicação de outro animal", async () => {
+    const token = tokens.get("veterinario")!;
+    const animal = await criarAnimal(token);
+    const outro = await criarAnimal(token);
+    const doOutro = await aplicarVacina(outro.id);
+
+    const semAplicacao = await request(app.getHttpServer())
+      .post(`/animais/${animal.id}/eventos`)
+      .set(auth(token))
+      .send({ tipo: "reacao_adversa", resumo: "Vomito", gravidadeReacao: "leve", desfechoReacao: "resolvida" })
+      .expect(201);
+    expect(semAplicacao.body.aplicacaoVacinaId).toBeNull();
+
+    for (const aplicacaoVacinaId of [doOutro, 999999999]) {
+      await request(app.getHttpServer())
+        .post(`/animais/${animal.id}/eventos`)
+        .set(auth(token))
+        .send({
+          tipo: "reacao_adversa",
+          resumo: "x",
+          gravidadeReacao: "leve",
+          desfechoReacao: "resolvida",
+          aplicacaoVacinaId,
+        })
+        .expect(400);
+    }
+  });
+
+  it("atualiza o desfecho por evento novo, mantendo a cadeia e o histórico", async () => {
+    const token = tokens.get("veterinario")!;
+    const animal = await criarAnimal(token);
+    const aplicacaoId = await aplicarVacina(animal.id);
+
+    const raiz = await reacao(animal.id, token, {
+      resumo: "Apatia",
+      gravidadeReacao: "grave",
+      desfechoReacao: "em_acompanhamento",
+      aplicacaoVacinaId: aplicacaoId,
+    });
+
+    const atualizacao = await reacao(animal.id, token, {
+      resumo: "Melhorou com suporte",
+      gravidadeReacao: "moderada",
+      desfechoReacao: "resolvida_com_sequela",
+      eventoOrigemId: raiz.id,
+    });
+    expect(atualizacao.eventoOrigemId).toBe(raiz.id);
+    // A atualização herda a aplicação da raiz sem precisar repetir.
+    expect(atualizacao.aplicacaoVacinaId).toBe(aplicacaoId);
+
+    // Apontar para a atualização resolve para a raiz: a cadeia fica com um nível só.
+    const terceira = await reacao(animal.id, token, {
+      resumo: "Alta",
+      gravidadeReacao: "leve",
+      desfechoReacao: "resolvida",
+      eventoOrigemId: atualizacao.id,
+    });
+    expect(terceira.eventoOrigemId).toBe(raiz.id);
+
+    const ficha = await request(app.getHttpServer()).get(`/animais/${animal.id}`).set(auth(token)).expect(200);
+    expect(ficha.body.reacoesAdversas).toHaveLength(1);
+    const corrente = ficha.body.reacoesAdversas[0];
+    expect(corrente).toMatchObject({
+      id: raiz.id,
+      gravidade: "leve",
+      desfecho: "resolvida",
+      emAcompanhamento: false,
+      resumo: "Apatia",
+    });
+    expect(corrente.atualizacoes.map((a: { id: number }) => a.id)).toEqual([atualizacao.id, terceira.id]);
+    // Nada foi apagado: os três eventos seguem na timeline.
+    expect(await prisma.eventoAnimal.count({ where: { animalId: animal.id, tipo: "reacao_adversa" } })).toBe(3);
+  });
+
+  it("recusa origem que não é reação adversa deste animal", async () => {
+    const token = tokens.get("coordenacao")!;
+    const animal = await criarAnimal(token);
+    const outro = await criarAnimal(token);
+    const doOutro = await reacao(outro.id, token, {
+      resumo: "x",
+      gravidadeReacao: "leve",
+      desfechoReacao: "resolvida",
+    });
+    const exame = await request(app.getHttpServer())
+      .post(`/animais/${animal.id}/eventos`)
+      .set(auth(token))
+      .send({ tipo: "exame", resumo: "Hemograma" })
+      .expect(201);
+
+    for (const eventoOrigemId of [doOutro.id, exame.body.id, 999999999]) {
+      await request(app.getHttpServer())
+        .post(`/animais/${animal.id}/eventos`)
+        .set(auth(token))
+        .send({
+          tipo: "reacao_adversa",
+          resumo: "x",
+          gravidadeReacao: "leve",
+          desfechoReacao: "resolvida",
+          eventoOrigemId,
+        })
+        .expect(400);
+    }
+  });
+
+  it("exige gravidade e desfecho na reação e proíbe esses campos nos outros eventos", async () => {
+    const token = tokens.get("veterinario")!;
+    const animal = await criarAnimal(token);
+
+    for (const corpo of [
+      { tipo: "reacao_adversa", resumo: "x" },
+      { tipo: "reacao_adversa", resumo: "x", gravidadeReacao: "leve" },
+      { tipo: "reacao_adversa", resumo: "x", desfechoReacao: "resolvida" },
+      { tipo: "reacao_adversa", resumo: "x", gravidadeReacao: "gravissima", desfechoReacao: "resolvida" },
+      { tipo: "reacao_adversa", resumo: "x", gravidadeReacao: "leve", desfechoReacao: "inventado" },
+      { tipo: "reacao_adversa", resumo: "   ", gravidadeReacao: "leve", desfechoReacao: "resolvida" },
+      { tipo: "exame", resumo: "x", gravidadeReacao: "leve", desfechoReacao: "resolvida" },
+      { tipo: "diagnostico", resumo: "x", aplicacaoVacinaId: 1 },
+      { tipo: "exame", resumo: "x", eventoOrigemId: 1 },
+    ]) {
+      await request(app.getHttpServer()).post(`/animais/${animal.id}/eventos`).set(auth(token)).send(corpo).expect(400);
+    }
+
+    // Evento comum continua funcionando e não ganha campos de reação.
+    const exame = await request(app.getHttpServer())
+      .post(`/animais/${animal.id}/eventos`)
+      .set(auth(token))
+      .send({ tipo: "exame", resumo: "Hemograma normal" })
+      .expect(201);
+    expect(exame.body.gravidadeReacao).toBeNull();
+    expect(exame.body.desfechoReacao).toBeNull();
+    const ficha = await request(app.getHttpServer()).get(`/animais/${animal.id}`).set(auth(token)).expect(200);
+    expect(ficha.body.reacoesAdversas).toEqual([]);
+  });
+
+  it("preserva a reação adversa quando a aplicação que a originou é anulada", async () => {
+    const animal = await criarAnimal(tokens.get("coordenacao")!);
+    const aplicacaoId = await aplicarVacina(animal.id);
+    const evento = await reacao(animal.id, tokens.get("veterinario")!, {
+      resumo: "Edema facial",
+      gravidadeReacao: "grave",
+      desfechoReacao: "em_acompanhamento",
+      aplicacaoVacinaId: aplicacaoId,
+    });
+
+    await request(app.getHttpServer())
+      .post(`/animais/${animal.id}/vacinacao/aplicacoes/${aplicacaoId}/anular`)
+      .set(auth(tokens.get("coordenacao")!))
+      .send({ motivo: "lote trocado" })
+      .expect(201);
+
+    const ficha = await request(app.getHttpServer()).get(`/animais/${animal.id}`).set(auth(tokens.get("agente")!)).expect(200);
+    expect(ficha.body.reacoesAdversas).toHaveLength(1);
+    expect(ficha.body.reacoesAdversas[0]).toMatchObject({ id: evento.id, aplicacaoVacinaId: aplicacaoId, gravidade: "grave" });
+    expect((await prisma.eventoAnimal.findUniqueOrThrow({ where: { id: evento.id } })).aplicacaoVacinaId).toBe(aplicacaoId);
+  });
+
+  it("bloqueia registrar reação adversa em animal em situação terminal", async () => {
+    const token = tokens.get("coordenacao")!;
+    const animal = await criarAnimal(token);
+    await prisma.animal.update({ where: { id: animal.id }, data: { situacao: "obito" } });
+    await request(app.getHttpServer())
+      .post(`/animais/${animal.id}/eventos`)
+      .set(auth(token))
+      .send({ tipo: "reacao_adversa", resumo: "x", gravidadeReacao: "leve", desfechoReacao: "resolvida" })
+      .expect(409);
+  });
+
+  it("alerta animal sem nenhuma vacina registrada e para de alertar depois da primeira dose", async () => {
+    const token = tokens.get("veterinario")!;
+    const animal = await criarAnimalAntigo(token);
+
+    expect(await tiposDeAlerta(animal.id, token)).toContain("sem_vacinacao_registrada");
+    await aplicarVacina(animal.id, { totalDoses: 3, intervaloDosesDias: 21 });
+    const depois = await tiposDeAlerta(animal.id, token);
+    expect(depois).not.toContain("sem_vacinacao_registrada");
+    expect(depois).toContain("esquema_vacinal_incompleto");
+  });
+
+  it("informa doses aplicadas, previstas e faltantes no alerta de esquema incompleto", async () => {
+    const token = tokens.get("veterinario")!;
+    const animal = await criarAnimalAntigo(token);
+    const vacina = await criarVacina({ totalDoses: 3, intervaloDosesDias: 21 });
+
+    await aplicar(animal.id, vacina.id, -60);
+    expect(await mensagemDoAlerta(animal.id, token, "esquema_vacinal_incompleto")).toBe(
+      `${vacina.nome}: 1 de 3 doses, faltam 2.`,
+    );
+
+    await aplicar(animal.id, vacina.id, -30);
+    expect(await mensagemDoAlerta(animal.id, token, "esquema_vacinal_incompleto")).toBe(
+      `${vacina.nome}: 2 de 3 doses, falta 1.`,
+    );
+
+    await aplicar(animal.id, vacina.id, -5);
+    expect(await tiposDeAlerta(animal.id, token)).not.toContain("esquema_vacinal_incompleto");
+  });
+
+  it("alerta dose vencida com os dias de atraso", async () => {
+    const token = tokens.get("veterinario")!;
+    const animal = await criarAnimalAntigo(token);
+    const vacina = await criarVacina({ totalDoses: 3, intervaloDosesDias: 21 });
+    // Aplicada há 25 dias, intervalo de 21: venceu há 4.
+    await aplicar(animal.id, vacina.id, -25);
+
+    expect(await mensagemDoAlerta(animal.id, token, "dose_vencida")).toBe(`${vacina.nome}: dose venceu há 4 dias.`);
+    expect(await tiposDeAlerta(animal.id, token)).not.toContain("dose_a_vencer");
+
+    // Segunda vacina vencida há 1 dia: agora há dois alertas deste tipo, um por protocolo.
+    const umDia = await criarVacina({ totalDoses: 3, intervaloDosesDias: 21 });
+    await aplicar(animal.id, umDia.id, -22);
+    expect(await mensagensDeAlerta(animal.id, token, "dose_vencida")).toEqual(
+      expect.arrayContaining([`${vacina.nome}: dose venceu há 4 dias.`, `${umDia.nome}: dose venceu há 1 dia.`]),
+    );
+  });
+
+  it("respeita a janela de aviso de cada vacina, e a janela 0 desliga o aviso antecipado", async () => {
+    const token = tokens.get("veterinario")!;
+    const animal = await criarAnimalAntigo(token);
+
+    // Próxima dose em 20 dias: só a de janela 30 avisa.
+    const janela7 = await criarVacina({ totalDoses: 3, intervaloDosesDias: 21, diasAvisoProximaDose: 7 });
+    const janela30 = await criarVacina({ totalDoses: 3, intervaloDosesDias: 21, diasAvisoProximaDose: 30 });
+    await aplicar(animal.id, janela7.id, -1);
+    await aplicar(animal.id, janela30.id, -1);
+
+    const mensagens = await mensagensDeAlerta(animal.id, token, "dose_a_vencer");
+    expect(mensagens).toEqual([`${janela30.nome}: dose vence em 20 dias.`]);
+
+    // Janela 0 nunca avisa antes, só quando vence.
+    const semAviso = await criarVacina({ totalDoses: 3, intervaloDosesDias: 21, diasAvisoProximaDose: 0 });
+    const outro = await criarAnimalAntigo(token);
+    await aplicar(outro.id, semAviso.id, -20);
+    expect(await tiposDeAlerta(outro.id, token)).not.toContain("dose_a_vencer");
+    // Editar só `dataProximaDose` (e não a calculada) é o que faz a data da equipe valer.
+    await prisma.aplicacaoVacina.updateMany({
+      where: { animalId: outro.id, vacinaId: semAviso.id },
+      data: { dataProximaDose: diaCivil(-1) },
+    });
+    const vencida = await mensagensDeAlerta(outro.id, token, "dose_vencida");
+    expect(vencida).toEqual([`${semAviso.nome}: dose venceu há 1 dia.`]);
+    expect(await tiposDeAlerta(outro.id, token)).not.toContain("dose_a_vencer");
+  });
+
+  it("usa a janela atual do catálogo, não a do momento em que o protocolo nasceu", async () => {
+    const token = tokens.get("veterinario")!;
+    const animal = await criarAnimalAntigo(token);
+    const vacina = await criarVacina({ totalDoses: 3, intervaloDosesDias: 21, diasAvisoProximaDose: 7 });
+    await aplicar(animal.id, vacina.id, -1);
+    expect(await tiposDeAlerta(animal.id, token)).not.toContain("dose_a_vencer");
+
+    await request(app.getHttpServer())
+      .patch(`/vacinas/${vacina.id}`)
+      .set(auth(tokens.get("coordenacao")!))
+      .send({ diasAvisoProximaDose: 30 })
+      .expect(200);
+
+    expect(await tiposDeAlerta(animal.id, token)).toContain("dose_a_vencer");
+  });
+
+  it("avisa vacina obrigatória pendente só para a espécie certa e para de avisar depois da dose", async () => {
+    const token = tokens.get("veterinario")!;
+    const obrigatoriaCao = await criarVacina({ totalDoses: 1, obrigatoria: true, especies: ["cao"] });
+    const cao = await criarAnimalAntigo(token);
+    const gato = await criarAnimalAntigo(token, { especie: "gato", racaId: racaGatoId });
+
+    // A antirrábica do seed também é obrigatória, então há mais de um alerta deste tipo.
+    expect(await mensagensDeAlerta(cao.id, token, "vacina_obrigatoria_pendente")).toContain(
+      `${obrigatoriaCao.nome} é obrigatória e não tem nenhuma dose registrada.`,
+    );
+    expect(await mensagensDeAlerta(gato.id, token, "vacina_obrigatoria_pendente")).not.toContain(
+      `${obrigatoriaCao.nome} é obrigatória e não tem nenhuma dose registrada.`,
+    );
+
+    await aplicar(cao.id, obrigatoriaCao.id, -1);
+    expect(await mensagensDeAlerta(cao.id, token, "vacina_obrigatoria_pendente")).not.toContain(
+      `${obrigatoriaCao.nome} é obrigatória e não tem nenhuma dose registrada.`,
+    );
+
+    // Vacina obrigatória inativada deixa de cobrar.
+    const outra = await criarVacina({ totalDoses: 1, obrigatoria: true, especies: ["cao"] });
+    const semDose = await criarAnimalAntigo(token);
+    expect(await mensagensDeAlerta(semDose.id, token, "vacina_obrigatoria_pendente")).toContain(
+      `${outra.nome} é obrigatória e não tem nenhuma dose registrada.`,
+    );
+    await request(app.getHttpServer())
+      .post(`/vacinas/${outra.id}/inativar`)
+      .set(auth(tokens.get("coordenacao")!))
+      .expect(201);
+    expect(await mensagensDeAlerta(semDose.id, token, "vacina_obrigatoria_pendente")).not.toContain(
+      `${outra.nome} é obrigatória e não tem nenhuma dose registrada.`,
+    );
+  });
+
+  it("troca os alertas de dose por protocolo interrompido e volta atrás ao retomar", async () => {
+    const token = tokens.get("veterinario")!;
+    const animal = await criarAnimalAntigo(token);
+    const vacina = await criarVacina({ totalDoses: 3, intervaloDosesDias: 21 });
+    await aplicar(animal.id, vacina.id, -25);
+    expect(await tiposDeAlerta(animal.id, token)).toEqual(expect.arrayContaining(["dose_vencida", "esquema_vacinal_incompleto"]));
+
+    const protocolo = await prisma.protocoloVacinal.findFirstOrThrow({ where: { animalId: animal.id, vacinaId: vacina.id } });
+    await request(app.getHttpServer())
+      .post(`/animais/${animal.id}/vacinacao/protocolos/${protocolo.id}/interromper`)
+      .set(auth(token))
+      .send({ motivo: "contraindicacao clinica" })
+      .expect(201);
+
+    const interrompido = await tiposDeAlerta(animal.id, token);
+    expect(interrompido).toContain("protocolo_vacinal_interrompido");
+    expect(interrompido).not.toContain("dose_vencida");
+    expect(interrompido).not.toContain("esquema_vacinal_incompleto");
+    expect(await mensagemDoAlerta(animal.id, token, "protocolo_vacinal_interrompido")).toBe(
+      `${vacina.nome}: protocolo interrompido (contraindicacao clinica).`,
+    );
+
+    await request(app.getHttpServer())
+      .post(`/animais/${animal.id}/vacinacao/protocolos/${protocolo.id}/retomar`)
+      .set(auth(token))
+      .expect(201);
+    const retomado = await tiposDeAlerta(animal.id, token);
+    expect(retomado).not.toContain("protocolo_vacinal_interrompido");
+    expect(retomado).toContain("dose_vencida");
+  });
+
+  it("alerta a observação antirrábica em curso com os dias restantes e depois como vencida", async () => {
+    const token = tokens.get("agente")!;
+    const animal = await criarAnimalAntigo(tokens.get("coordenacao")!);
+
+    await patchAnimal(animal.id, token, { situacao: "em_observacao_antirrabica" });
+    expect(await mensagemDoAlerta(animal.id, token, "observacao_antirrabica_em_curso")).toMatch(/faltam 10 dias/);
+
+    await prisma.animal.update({ where: { id: animal.id }, data: { observacaoAntirrabicaInicioEm: diasAtras(9) } });
+    expect(await mensagemDoAlerta(animal.id, token, "observacao_antirrabica_em_curso")).toMatch(/falta 1 dia/);
+
+    await prisma.animal.update({ where: { id: animal.id }, data: { observacaoAntirrabicaInicioEm: diasAtras(10) } });
+    const noPrazo = await tiposDeAlerta(animal.id, token);
+    expect(noPrazo).toContain("observacao_antirrabica_vencida");
+    expect(noPrazo).not.toContain("observacao_antirrabica_em_curso");
+    expect(await mensagemDoAlerta(animal.id, token, "observacao_antirrabica_vencida")).toMatch(/observação final/i);
+
+    await prisma.animal.update({ where: { id: animal.id }, data: { observacaoAntirrabicaInicioEm: diasAtras(14) } });
+    expect(await mensagemDoAlerta(animal.id, token, "observacao_antirrabica_vencida")).toMatch(/há 4 dias/);
+
+    // Encerrar tira os dois alertas.
+    await request(app.getHttpServer())
+      .post(`/animais/${animal.id}/encerrar-observacao-antirrabica`)
+      .set(auth(token))
+      .send({ observacaoFinal: "Sem sinais.", situacao: "saudavel" })
+      .expect(201);
+    const encerrado = await tiposDeAlerta(animal.id, token);
+    expect(encerrado).not.toContain("observacao_antirrabica_vencida");
+    expect(encerrado).not.toContain("observacao_antirrabica_em_curso");
+  });
+
+  it("alerta reação adversa em acompanhamento e para quando a cadeia fecha o desfecho", async () => {
+    const token = tokens.get("veterinario")!;
+    const animal = await criarAnimalAntigo(token);
+    const aplicacaoId = await aplicarVacina(animal.id);
+
+    const raiz = await reacao(animal.id, token, {
+      resumo: "Apatia",
+      gravidadeReacao: "grave",
+      desfechoReacao: "em_acompanhamento",
+      aplicacaoVacinaId: aplicacaoId,
+    });
+    expect(await mensagemDoAlerta(animal.id, token, "reacao_adversa_em_acompanhamento")).toBe(
+      "Reação adversa grave registrada hoje segue em acompanhamento.",
+    );
+
+    // O alerta segue o desfecho corrente da cadeia, não o do primeiro evento.
+    await reacao(animal.id, token, {
+      resumo: "Alta",
+      gravidadeReacao: "leve",
+      desfechoReacao: "resolvida",
+      eventoOrigemId: raiz.id,
+    });
+    expect(await tiposDeAlerta(animal.id, token)).not.toContain("reacao_adversa_em_acompanhamento");
+
+    // Reação nova reabre o alerta, e a contagem de dias usa a data do registro.
+    const antiga = await reacao(animal.id, token, {
+      resumo: "Edema",
+      gravidadeReacao: "moderada",
+      desfechoReacao: "em_acompanhamento",
+    });
+    await prisma.eventoAnimal.update({ where: { id: antiga.id }, data: { createdAt: diasAtras(3) } });
+    expect(await mensagemDoAlerta(animal.id, token, "reacao_adversa_em_acompanhamento")).toBe(
+      "Reação adversa moderada registrada há 3 dias segue em acompanhamento.",
+    );
+  });
+
+  it("não gera alerta de vacinação, observação ou reação em animal em situação terminal", async () => {
+    const token = tokens.get("coordenacao")!;
+    const animal = await criarAnimalAntigo(token);
+    const vacina = await criarVacina({ totalDoses: 3, intervaloDosesDias: 21, obrigatoria: true });
+    await aplicar(animal.id, vacina.id, -30);
+    await reacao(animal.id, token, { resumo: "x", gravidadeReacao: "leve", desfechoReacao: "em_acompanhamento" });
+    await prisma.animal.update({
+      where: { id: animal.id },
+      data: { situacao: "em_observacao_antirrabica", observacaoAntirrabicaInicioEm: diasAtras(12) },
+    });
+
+    const operacional = await tiposDeAlerta(animal.id, token);
+    expect(operacional).toEqual(expect.arrayContaining([
+      "dose_vencida",
+      "esquema_vacinal_incompleto",
+      "observacao_antirrabica_vencida",
+      "reacao_adversa_em_acompanhamento",
+    ]));
+
+    await prisma.animal.update({ where: { id: animal.id }, data: { situacao: "obito" } });
+    const terminal = await tiposDeAlerta(animal.id, token);
+    for (const tipo of [
+      "dose_vencida",
+      "esquema_vacinal_incompleto",
+      "sem_vacinacao_registrada",
+      "vacina_obrigatoria_pendente",
+      "observacao_antirrabica_vencida",
+      "observacao_antirrabica_em_curso",
+      "reacao_adversa_em_acompanhamento",
+      "protocolo_vacinal_interrompido",
+    ]) {
+      expect(terminal).not.toContain(tipo);
+    }
+    // As pendências de cadastro continuam.
+    expect(terminal).toContain("sem_baia");
+  });
+
+  it("mostra os mesmos alertas na listagem e na ficha, e a listagem não devolve protocolos nem eventos", async () => {
+    const token = tokens.get("veterinario")!;
+    const animal = await criarAnimalAntigo(token);
+    const vacina = await criarVacina({ totalDoses: 3, intervaloDosesDias: 21 });
+    await aplicar(animal.id, vacina.id, -25);
+    await reacao(animal.id, token, { resumo: "x", gravidadeReacao: "leve", desfechoReacao: "em_acompanhamento" });
+
+    const lista = await request(app.getHttpServer())
+      .get(`/animais?busca=${animal.numeroRegistro}`)
+      .set(auth(token))
+      .expect(200);
+    const naLista = lista.body.items.find((item: { id: number }) => item.id === animal.id);
+    const ficha = await request(app.getHttpServer()).get(`/animais/${animal.id}`).set(auth(token)).expect(200);
+
+    expect(naLista.alertas.map((a: { tipo: string }) => a.tipo).sort()).toEqual(
+      ficha.body.alertas.map((a: { tipo: string }) => a.tipo).sort(),
+    );
+    // Os dados só de cálculo não viajam na resposta.
+    expect(naLista.protocolosVacinais).toBeUndefined();
+    expect(naLista.eventos).toBeUndefined();
+    expect(ficha.body.protocolosVacinais).toBeUndefined();
+    // A ficha continua com a timeline completa e as reações derivadas.
+    expect(Array.isArray(ficha.body.eventos)).toBe(true);
+    expect(ficha.body.eventos.length).toBeGreaterThan(1);
+    expect(ficha.body.reacoesAdversas).toHaveLength(1);
+
+    // O filtro de alertas da listagem enxerga os alertas de vacinação.
+    const comAlertas = await request(app.getHttpServer())
+      .get(`/animais?busca=${animal.numeroRegistro}&comAlertas=true`)
+      .set(auth(token))
+      .expect(200);
+    expect(comAlertas.body.items.map((i: { id: number }) => i.id)).toContain(animal.id);
+  });
+
+  // Os cenários de alerta aplicam doses de até 60 dias atrás; o acolhimento precisa ser anterior a isso,
+  // senão a API recusa como registro retroativo sem indicador.
+  async function criarAnimalAntigo(token: string, overrides: Partial<ReturnType<typeof nextAnimal>> = {}) {
+    return criarAnimal(token, { dataAcolhimento: "2026-01-10T12:00:00.000Z", ...overrides });
+  }
+
+  async function tiposDeAlerta(animalId: number, token: string): Promise<string[]> {
+    const ficha = await request(app.getHttpServer()).get(`/animais/${animalId}`).set(auth(token)).expect(200);
+    return (ficha.body.alertas as { tipo: string }[]).map((alerta) => alerta.tipo);
+  }
+
+  async function mensagensDeAlerta(animalId: number, token: string, tipo: string): Promise<string[]> {
+    const ficha = await request(app.getHttpServer()).get(`/animais/${animalId}`).set(auth(token)).expect(200);
+    return (ficha.body.alertas as { tipo: string; mensagem: string }[])
+      .filter((alerta) => alerta.tipo === tipo)
+      .map((alerta) => alerta.mensagem);
+  }
+
+  async function mensagemDoAlerta(animalId: number, token: string, tipo: string): Promise<string> {
+    const encontradas = await mensagensDeAlerta(animalId, token, tipo);
+    if (encontradas.length !== 1) {
+      throw new Error(`Esperava exatamente 1 alerta "${tipo}", achei ${encontradas.length}: ${JSON.stringify(encontradas)}`);
+    }
+    return encontradas[0];
+  }
+
+  async function aplicarComLote(animalId: number, vacinaId: number, lote: string) {
+    const response = await request(app.getHttpServer())
+      .post(`/animais/${animalId}/vacinacao/aplicacoes`)
+      .set(auth(tokens.get("veterinario")!))
+      .send({ vacinaId, dataAplicacao: formatDataCivil(hojeCivil()), lote });
+    if (response.status !== 201) {
+      throw new Error(`Esperava 201 ao aplicar com lote, veio ${response.status}: ${JSON.stringify(response.body)}`);
+    }
+    return response.body.aplicacao.id as number;
+  }
+
+  function diaCivil(offset: number) {
+    return new Date(`${formatDataCivil(addDias(hojeCivil(), offset))}T00:00:00.000Z`);
+  }
+
+  async function criarVacina(dados: {
+    totalDoses: number;
+    intervaloDosesDias?: number;
+    revacinacaoDias?: number;
+    diasAvisoProximaDose?: number;
+    obrigatoria?: boolean;
+    especies?: ("cao" | "gato")[];
+  }) {
+    seq += 1;
+    const nome = `Alerta ${STAMP}-${seq}`;
+    return prisma.vacina.create({
+      data: {
+        nome,
+        nomeNormalizado: nome.toLocaleLowerCase("pt-BR"),
+        especies: dados.especies ?? ["cao", "gato"],
+        totalDoses: dados.totalDoses,
+        intervaloDosesDias: dados.intervaloDosesDias ?? null,
+        revacinacaoDias: dados.revacinacaoDias ?? null,
+        diasAvisoProximaDose: dados.diasAvisoProximaDose ?? 7,
+        obrigatoria: dados.obrigatoria ?? false,
+      },
+    });
+  }
+
+  async function aplicar(animalId: number, vacinaId: number, offsetDias: number) {
+    seq += 1;
+    const response = await request(app.getHttpServer())
+      .post(`/animais/${animalId}/vacinacao/aplicacoes`)
+      .set(auth(tokens.get("veterinario")!))
+      .send({
+        vacinaId,
+        dataAplicacao: formatDataCivil(addDias(hojeCivil(), offsetDias)),
+        lote: `LAL-${STAMP}-${seq}`,
+        confirmaAdiantada: true,
+        motivoAdiantada: "cenario de teste",
+      });
+    if (response.status !== 201) {
+      throw new Error(`Esperava 201 ao aplicar, veio ${response.status}: ${JSON.stringify(response.body)}`);
+    }
+    return response.body.aplicacao.id as number;
+  }
+
+  it("informa na consulta por lote quais aplicações tiveram reação adversa, com o desfecho corrente", async () => {
+    const token = tokens.get("veterinario")!;
+    const vacina = await criarVacina({ totalDoses: 3, intervaloDosesDias: 21 });
+    const lote = `LR${STAMP}`;
+    const comReacao = await criarAnimalAntigo(token);
+    const semReacao = await criarAnimalAntigo(token);
+
+    const aplicacaoA = await aplicarComLote(comReacao.id, vacina.id, lote);
+    await aplicarComLote(semReacao.id, vacina.id, lote);
+
+    const raiz = await reacao(comReacao.id, token, {
+      resumo: "Edema",
+      gravidadeReacao: "grave",
+      desfechoReacao: "em_acompanhamento",
+      aplicacaoVacinaId: aplicacaoA,
+    });
+
+    const antes = await request(app.getHttpServer()).get(`/vacinacao/aplicacoes?lote=${lote}`).set(auth(token)).expect(200);
+    const itemComReacao = antes.body.items.find((i: { animal: { id: number } }) => i.animal.id === comReacao.id);
+    const itemSem = antes.body.items.find((i: { animal: { id: number } }) => i.animal.id === semReacao.id);
+    expect(itemSem.reacoesAdversas).toEqual([]);
+    expect(itemComReacao.reacoesAdversas).toEqual([
+      { id: raiz.id, gravidade: "grave", desfecho: "em_acompanhamento", emAcompanhamento: true },
+    ]);
+
+    // O desfecho exibido é o corrente da cadeia, não o do primeiro evento.
+    await reacao(comReacao.id, token, {
+      resumo: "Alta",
+      gravidadeReacao: "leve",
+      desfechoReacao: "resolvida",
+      eventoOrigemId: raiz.id,
+    });
+    const depois = await request(app.getHttpServer()).get(`/vacinacao/aplicacoes?lote=${lote}`).set(auth(token)).expect(200);
+    const atualizado = depois.body.items.find((i: { animal: { id: number } }) => i.animal.id === comReacao.id);
+    expect(atualizado.reacoesAdversas).toEqual([
+      { id: raiz.id, gravidade: "leve", desfecho: "resolvida", emAcompanhamento: false },
+    ]);
+  });
+
+  it("não muda a situação do animal quando o desfecho da reação é óbito", async () => {
+    const token = tokens.get("veterinario")!;
+    const animal = await criarAnimalAntigo(token);
+    const aplicacaoId = await aplicarVacina(animal.id);
+
+    await reacao(animal.id, token, {
+      resumo: "Choque anafilático",
+      gravidadeReacao: "grave",
+      desfechoReacao: "obito",
+      aplicacaoVacinaId: aplicacaoId,
+    });
+
+    // São registros independentes: a reação descreve o quadro, a situação é ação separada e explícita.
+    const ficha = await request(app.getHttpServer()).get(`/animais/${animal.id}`).set(auth(token)).expect(200);
+    expect(ficha.body.situacao).toBe("em_tratamento");
+    expect(ficha.body.somenteLeitura).toBe(false);
+    expect(ficha.body.reacoesAdversas[0]).toMatchObject({ desfecho: "obito", emAcompanhamento: false });
+  });
+
+  it("não bloqueia vacinar animal em observação antirrábica, inclusive com a própria antirrábica", async () => {
+    const token = tokens.get("veterinario")!;
+    const animal = await criarAnimalAntigo(token);
+    await patchAnimal(animal.id, token, { situacao: "em_observacao_antirrabica" });
+
+    const antirrabica = await prisma.vacina.findFirstOrThrow({ where: { nomeNormalizado: "antirrábica" } });
+    const resposta = await request(app.getHttpServer())
+      .post(`/animais/${animal.id}/vacinacao/aplicacoes`)
+      .set(auth(token))
+      .send({ vacinaId: antirrabica.id, dataAplicacao: formatDataCivil(hojeCivil()), lote: `LAB-${STAMP}` });
+    expect(resposta.status).toBe(201);
+
+    // A situação não muda por causa da vacina.
+    const ficha = await request(app.getHttpServer()).get(`/animais/${animal.id}`).set(auth(token)).expect(200);
+    expect(ficha.body.situacao).toBe("em_observacao_antirrabica");
+
+    // Outra vacina qualquer também passa.
+    await aplicarVacina(animal.id);
+  });
+
+  function diasAtras(dias: number) {
+    return new Date(Date.now() - dias * 86_400_000);
+  }
+
+  function patchAnimal(id: number, token: string, body: Record<string, unknown>) {
+    return request(app.getHttpServer()).patch(`/animais/${id}`).set(auth(token)).send(body).expect(200);
+  }
+
+  async function reacao(animalId: number, token: string, body: Record<string, unknown>) {
+    const response = await request(app.getHttpServer())
+      .post(`/animais/${animalId}/eventos`)
+      .set(auth(token))
+      .send({ tipo: "reacao_adversa", ...body })
+      .expect(201);
+    return response.body as { id: number; eventoOrigemId: number | null; aplicacaoVacinaId: number | null };
+  }
+
+  // Aplica uma vacina criada só para este spec, para a reação ter a que se ligar.
+  async function aplicarVacina(animalId: number, esquema: { totalDoses: number; intervaloDosesDias?: number } = { totalDoses: 3, intervaloDosesDias: 21 }) {
+    const vacina = await criarVacina(esquema);
+    return aplicar(animalId, vacina.id, 0);
+  }
+
   async function criarAnimal(token: string, overrides: Partial<ReturnType<typeof nextAnimal>> = {}) {
     const response = await request(app.getHttpServer())
       .post("/animais")
@@ -1149,6 +2025,9 @@ async function cleanup(prisma: PrismaClient) {
   }
   await prisma.animal.deleteMany({
     where: { numeroRegistroNormalizado: { startsWith: `ani-${STAMP}` } },
+  });
+  await prisma.vacina.deleteMany({
+    where: { OR: [{ nomeNormalizado: { startsWith: `reacao ${STAMP}` } }, { nomeNormalizado: { startsWith: `alerta ${STAMP}` } }] },
   });
   await prisma.racaAnimal.deleteMany({
     where: { nomeNormalizado: { contains: STAMP.toLocaleLowerCase("pt-BR") } },

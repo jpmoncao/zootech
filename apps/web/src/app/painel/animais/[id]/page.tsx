@@ -3,21 +3,24 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ClipboardCheck, RefreshCw } from "lucide-react";
+import { ArrowLeft, ClipboardCheck, RefreshCw, Syringe } from "lucide-react";
 import { AdocaoPanel } from "@/components/adocao-panel";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Shell } from "@/components/shell";
-import { canManageAnimais } from "@/lib/access";
+import { DialogoEncerrarObservacao } from "@/components/vacinacao/dialogo-encerrar-observacao";
+import { idadeEmSemanas } from "@/components/vacinacao/comum";
+import { SecaoVacinacao } from "@/components/vacinacao/secao-vacinacao";
+import { canAnularAplicacaoVacina, canManageAnimais, canManageVacinacao, canRegistrarReacaoAdversa } from "@/lib/access";
 import { ApiError, getCurrentUser, listarBaias, obterAnimal, type Animal, type Baia } from "@/lib/api";
 import { AlertasFicha } from "./alertas-card";
 import { BaiaFicha } from "./baia-card";
 import { CastracoesCard } from "./castracoes-card";
 import { DadosFicha } from "./dados-ficha";
 import { ExamesFicha } from "./exames-card";
-import { painelFicha, SectionHeader } from "./ficha-ui";
+import { formatDateOnly, painelFicha, SectionHeader } from "./ficha-ui";
 import { GaleriaFicha } from "./galeria-card";
 import { HistoricoFicha } from "./historico";
 import { ObservacoesFicha } from "./observacoes-card";
@@ -47,6 +50,9 @@ function FichaAnimal() {
   const perfil = getCurrentUser()?.perfilAcesso ?? null;
   const podeEditar = Boolean(perfil && canManageAnimais(perfil));
   const podeRevogar = perfil === "coordenacao";
+  const podeOperarVacinacao = Boolean(perfil && canManageVacinacao(perfil));
+  const podeAnularAplicacao = Boolean(perfil && canAnularAplicacaoVacina(perfil));
+  const podeRegistrarReacao = Boolean(perfil && canRegistrarReacaoAdversa(perfil));
 
   useEffect(() => {
     if (id == null) return;
@@ -167,6 +173,9 @@ function FichaAnimal() {
           podeEditar={podeEditar && !animal.somenteLeitura}
           podeRevogar={podeRevogar}
           podeLiberar={perfil === "coordenacao" || perfil === "veterinario"}
+          podeOperarVacinacao={podeOperarVacinacao}
+          podeAnularAplicacao={podeAnularAplicacao}
+          podeRegistrarReacao={podeRegistrarReacao}
           onChanged={reloadAfterChange}
           onDirtyChange={setDirty}
         />
@@ -190,6 +199,9 @@ function Ficha({
   podeEditar,
   podeRevogar,
   podeLiberar,
+  podeOperarVacinacao,
+  podeAnularAplicacao,
+  podeRegistrarReacao,
   onChanged,
   onDirtyChange,
 }: {
@@ -198,9 +210,15 @@ function Ficha({
   podeEditar: boolean;
   podeRevogar: boolean;
   podeLiberar: boolean;
+  podeOperarVacinacao: boolean;
+  podeAnularAplicacao: boolean;
+  podeRegistrarReacao: boolean;
   onChanged: () => Promise<void>;
   onDirtyChange: (dirty: boolean) => void;
 }) {
+  const [encerrarObservacaoAberto, setEncerrarObservacaoAberto] = useState(false);
+  const observacaoAntirrabica = animal.observacaoAntirrabica ?? null;
+
   return (
     <div className="flex flex-col gap-4">
       <div className="grid [grid-template-columns:minmax(0,_1fr)_minmax(300px,_0.42fr)] [align-items:start] gap-4 max-[760px]:grid-cols-[1fr]">
@@ -220,12 +238,60 @@ function Ficha({
             <PesoFicha animal={animal} disabled={!podeEditar} onChanged={onChanged} />
             <ObservacoesFicha animal={animal} disabled={!podeEditar} onChanged={onChanged} />
             <ExamesFicha animal={animal} disabled={!podeEditar} onChanged={onChanged} />
+            <section id="vacinacao-ficha" className={painelFicha} aria-label="Vacinação">
+              <SectionHeader
+                icon={<Syringe aria-hidden="true" />}
+                title="Vacinação"
+                note={podeOperarVacinacao ? "Doses, protocolos e reações adversas." : "Somente consulta: registrar dose é ação clínica."}
+              />
+              {observacaoAntirrabica ? (
+                <Alert>
+                  <AlertDescription>
+                    <span className="flex flex-wrap items-center justify-between gap-2.5">
+                      <span>
+                        Observação antirrábica iniciada em {formatDateOnly(observacaoAntirrabica.inicioEm)} ·{" "}
+                        {observacaoAntirrabica.vencida
+                          ? "período encerrado, registre a observação final."
+                          : `${observacaoAntirrabica.diasRestantes === 1 ? "falta 1 dia" : `faltam ${observacaoAntirrabica.diasRestantes} dias`}.`}
+                      </span>
+                      {podeEditar ? (
+                        <Button type="button" variant="outline" onClick={() => setEncerrarObservacaoAberto(true)}>
+                          Encerrar observação
+                        </Button>
+                      ) : null}
+                    </span>
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+              <SecaoVacinacao
+                animalId={animal.id}
+                somenteLeitura={animal.somenteLeitura}
+                podeOperar={podeOperarVacinacao}
+                podeAnular={podeAnularAplicacao}
+                podeRegistrarReacao={podeRegistrarReacao}
+                reacoes={animal.reacoesAdversas ?? []}
+                idadeAnimal={idadeEmSemanas(animal)}
+                onAnimalAlterado={onChanged}
+              />
+            </section>
             {animal.somenteLeitura && podeRevogar ? <RevogarFicha animal={animal} onChanged={onChanged} /> : null}
           </div>
         </div>
-        <AlertasFicha animal={animal} podeEditar={podeEditar} incluiRevogacao={animal.somenteLeitura && podeRevogar} />
+        <AlertasFicha
+          animal={animal}
+          podeEditar={podeEditar}
+          incluiRevogacao={animal.somenteLeitura && podeRevogar}
+          onEncerrarObservacao={() => setEncerrarObservacaoAberto(true)}
+        />
       </div>
       <HistoricoFicha eventos={animal.eventos ?? []} />
+      <DialogoEncerrarObservacao
+        open={encerrarObservacaoAberto}
+        animalId={animal.id}
+        periodo={observacaoAntirrabica}
+        onOpenChange={setEncerrarObservacaoAberto}
+        onEncerrado={onChanged}
+      />
     </div>
   );
 }

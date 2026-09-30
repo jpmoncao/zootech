@@ -20,7 +20,7 @@ export function RevogarFicha({ animal, onChanged }: { animal: Animal; onChanged:
 }
 
 function RevogarTerminal({ animal, onChanged }: { animal: Animal; onChanged: () => Promise<void> }) {
-  const [situacao, setSituacao] = useState<Extract<SituacaoAnimal, "em_tratamento" | "em_quarentena_observacao" | "saudavel">>("em_tratamento");
+  const [situacao, setSituacao] = useState<Extract<SituacaoAnimal, "em_tratamento" | "em_quarentena_observacao" | "em_observacao_antirrabica" | "saudavel">>("em_tratamento");
   const [motivo, setMotivo] = useState("");
   const [saving, setSaving] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -68,6 +68,7 @@ function RevogarTerminal({ animal, onChanged }: { animal: Animal; onChanged: () 
               options={[
                 { value: "em_tratamento", label: "Em tratamento" },
                 { value: "em_quarentena_observacao", label: "Quarentena/observação" },
+                { value: "em_observacao_antirrabica", label: "Observação antirrábica" },
                 { value: "saudavel", label: "Saudável" },
               ]}
             />

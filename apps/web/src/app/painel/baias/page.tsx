@@ -82,6 +82,7 @@ const estadoLabel: Record<EstadoBaia, string> = {
 const situacaoAnimalLabel: Record<BaiaOcupante["situacao"], string> = {
   em_tratamento: "Em tratamento",
   em_quarentena_observacao: "Quarentena/observação",
+  em_observacao_antirrabica: "Observação antirrábica",
   saudavel: "Saudável",
   adotado: "Adotado",
   obito: "Óbito",
@@ -649,7 +650,7 @@ function OcupanteRow({ ocupante }: { ocupante: BaiaOcupante }) {
         </span>
       </Link>
       <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded-full bg-ok-50 px-2.5 py-1 text-[12px] font-bold text-ok data-[situacao=em_tratamento]:bg-info-50 data-[situacao=em_tratamento]:text-info data-[situacao=em_quarentena_observacao]:bg-info-50 data-[situacao=em_quarentena_observacao]:text-info data-[situacao=adotado]:bg-violet-50 data-[situacao=adotado]:text-violet data-[situacao=obito]:bg-violet-50 data-[situacao=obito]:text-violet" data-situacao={ocupante.situacao}>{situacaoAnimalLabel[ocupante.situacao]}</span>
+        <span className="rounded-full bg-ok-50 px-2.5 py-1 text-[12px] font-bold text-ok data-[situacao=em_tratamento]:bg-info-50 data-[situacao=em_tratamento]:text-info data-[situacao=em_quarentena_observacao]:bg-info-50 data-[situacao=em_quarentena_observacao]:text-info data-[situacao=em_observacao_antirrabica]:bg-warn-50 data-[situacao=em_observacao_antirrabica]:text-warn data-[situacao=adotado]:bg-violet-50 data-[situacao=adotado]:text-violet data-[situacao=obito]:bg-violet-50 data-[situacao=obito]:text-violet" data-situacao={ocupante.situacao}>{situacaoAnimalLabel[ocupante.situacao]}</span>
         {ocupante.alertas.length > 0 ? (
           <Tooltip>
             <TooltipTrigger asChild>

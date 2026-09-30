@@ -1,5 +1,6 @@
 "use client";
 
+import { ReactNode } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,6 +20,7 @@ export function ConfirmDialog({
   confirmVariant = "destructive",
   onOpenChange,
   onConfirm,
+  children,
 }: {
   open: boolean;
   title: string;
@@ -27,6 +29,8 @@ export function ConfirmDialog({
   confirmVariant?: "default" | "destructive";
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
+  /** Conteúdo extra entre a descrição e os botões, como um campo de motivo obrigatório. */
+  children?: ReactNode;
 }) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -35,6 +39,7 @@ export function ConfirmDialog({
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
+        {children}
         <AlertDialogFooter>
           <AlertDialogCancel>Cancelar</AlertDialogCancel>
           <AlertDialogAction variant={confirmVariant} onClick={onConfirm}>

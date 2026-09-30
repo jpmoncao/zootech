@@ -14,6 +14,7 @@ function itensIndice(animal: Animal, incluiRevogacao: boolean) {
     { href: "#peso-ficha", label: "Peso", total: animal.pesagens?.length ?? 0 },
     { href: "#observacoes-ficha", label: "Observações", total: animal.observacoes?.length ?? 0 },
     { href: "#exames-ficha", label: "Exames e diagnósticos", total: exames },
+    { href: "#vacinacao-ficha", label: "Vacinação" },
   ];
   if (incluiRevogacao) itens.push({ href: "#revogacao-ficha", label: "Revogar estado terminal" });
   itens.push({ href: "#historico-ficha", label: "Histórico", total: animal.eventos?.length ?? 0 });

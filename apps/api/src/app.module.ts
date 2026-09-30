@@ -6,6 +6,7 @@ import { BaiasModule } from "./baias/baias.module";
 import { HealthController } from "./health.controller";
 import { PrismaModule } from "./prisma/prisma.module";
 import { UsersModule } from "./users/users.module";
+import { VacinacaoModule } from "./vacinacao/vacinacao.module";
 import { TutoresModule } from "./tutores/tutores.module";
 import { AdocoesModule } from "./adocoes/adocoes.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
@@ -18,6 +19,7 @@ import { DashboardModule } from "./dashboard/dashboard.module";
     UsersModule,
     BaiasModule,
     AnimaisModule,
+    VacinacaoModule,
     TutoresModule,
     AdocoesModule,
     DashboardModule,

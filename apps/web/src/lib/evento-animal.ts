@@ -1,4 +1,5 @@
 import {
+  Ban,
   CalendarCheck2,
   CalendarClock,
   CalendarOff,
@@ -12,10 +13,15 @@ import {
   InfoIcon,
   MapPinPenIcon,
   MessageCircleIcon,
+  PauseCircle,
+  PlayCircle,
   PlusCircleIcon,
   RewindIcon,
   ScaleIcon,
+  ShieldAlert,
   SliceIcon,
+  Syringe,
+  TriangleAlert,
   type LucideIcon,
 } from "lucide-react";
 import type { EventoAnimal, TipoEventoAnimal } from "@/lib/api";
@@ -41,6 +47,18 @@ export const eventoLabel: Record<TipoEventoAnimal, string> = {
   diagnostico: "Diagnóstico",
   revogacao_situacao_terminal: "Revogação de estado terminal",
   castracao: "Castração",
+  aplicacao_vacina: "Vacina aplicada",
+  edicao_aplicacao_vacina: "Aplicação editada",
+  anulacao_aplicacao_vacina: "Aplicação anulada",
+  interrupcao_protocolo_vacinal: "Protocolo interrompido",
+  retomada_protocolo_vacinal: "Protocolo retomado",
+  criacao_agendamento_vacina: "Vacinação agendada",
+  remarcacao_agendamento_vacina: "Agendamento remarcado",
+  cancelamento_agendamento_vacina: "Agendamento cancelado",
+  falta_agendamento_vacina: "Falta no agendamento",
+  reabertura_agendamento_vacina: "Agendamento reaberto",
+  reacao_adversa: "Reação adversa",
+  encerramento_observacao_antirrabica: "Observação antirrábica encerrada",
 };
 
 const castracaoEventoVisual: Record<string, VisualEventoAnimal> = {
@@ -65,6 +83,18 @@ const eventoIcon: Record<TipoEventoAnimal, LucideIcon> = {
   diagnostico: ClipboardCheckIcon,
   revogacao_situacao_terminal: RewindIcon,
   castracao: SliceIcon,
+  aplicacao_vacina: Syringe,
+  edicao_aplicacao_vacina: Edit3Icon,
+  anulacao_aplicacao_vacina: Ban,
+  interrupcao_protocolo_vacinal: PauseCircle,
+  retomada_protocolo_vacinal: PlayCircle,
+  criacao_agendamento_vacina: CalendarCheck2,
+  remarcacao_agendamento_vacina: CalendarClock,
+  cancelamento_agendamento_vacina: CalendarOff,
+  falta_agendamento_vacina: CalendarOff,
+  reabertura_agendamento_vacina: CalendarClock,
+  reacao_adversa: TriangleAlert,
+  encerramento_observacao_antirrabica: ShieldAlert,
 };
 
 export function eventoVisual(evento: EventoAnimal): VisualEventoAnimal {
@@ -97,8 +127,33 @@ function castracaoAcao(dados: unknown) {
 }
 
 function eventoTone(tipo: TipoEventoAnimal): TomEventoAnimal {
-  if (tipo === "revogacao_situacao_terminal" || tipo === "mudanca_situacao") return "crit";
-  if (tipo === "criacao" || tipo === "castracao") return "muted";
-  if (tipo === "pesagem" || tipo === "mudanca_baia" || tipo === "exame" || tipo === "diagnostico" || tipo === "foto" || tipo === "observacao") return "info";
+  if (
+    tipo === "revogacao_situacao_terminal" ||
+    tipo === "mudanca_situacao" ||
+    tipo === "anulacao_aplicacao_vacina" ||
+    tipo === "reacao_adversa" ||
+    tipo === "falta_agendamento_vacina" ||
+    tipo === "cancelamento_agendamento_vacina"
+  ) {
+    return "crit";
+  }
+  if (tipo === "criacao" || tipo === "castracao" || tipo === "interrupcao_protocolo_vacinal") return "muted";
+  if (
+    tipo === "pesagem" ||
+    tipo === "mudanca_baia" ||
+    tipo === "exame" ||
+    tipo === "diagnostico" ||
+    tipo === "foto" ||
+    tipo === "observacao" ||
+    tipo === "aplicacao_vacina" ||
+    tipo === "edicao_aplicacao_vacina" ||
+    tipo === "criacao_agendamento_vacina" ||
+    tipo === "remarcacao_agendamento_vacina" ||
+    tipo === "reabertura_agendamento_vacina" ||
+    tipo === "retomada_protocolo_vacinal" ||
+    tipo === "encerramento_observacao_antirrabica"
+  ) {
+    return "info";
+  }
   return "ok";
 }

@@ -5,7 +5,17 @@ import { Button } from "@/components/ui/button";
 import type { Animal } from "@/lib/api";
 import { IndiceFicha } from "./indice-ficha";
 
-export function AlertasFicha({ animal, podeEditar, incluiRevogacao }: { animal: Animal; podeEditar: boolean; incluiRevogacao: boolean }) {
+export function AlertasFicha({
+  animal,
+  podeEditar,
+  incluiRevogacao,
+  onEncerrarObservacao,
+}: {
+  animal: Animal;
+  podeEditar: boolean;
+  incluiRevogacao: boolean;
+  onEncerrarObservacao: () => void;
+}) {
   return (
     <aside className="sticky top-4 flex max-h-[calc(100dvh-6rem)] flex-col gap-4 self-start overflow-auto overscroll-contain [grid-column:2] [grid-row:1] max-[760px]:order-2 max-[760px]:static max-[760px]:max-h-none max-[760px]:[grid-column:auto] max-[760px]:[grid-row:auto]">
       <section className="[background:var(--surface)] [border:1px_solid_var(--line)] [border-radius:10px] [padding:20px] [display:flex] [flex-direction:column] gap-4 [box-shadow:var(--shadow)] [&_h2]:[margin-top:0]" aria-label="Alertas e pendências">
@@ -21,7 +31,12 @@ export function AlertasFicha({ animal, podeEditar, incluiRevogacao }: { animal: 
             {animal.alertas.map((alerta) => (
               <li key={`${alerta.tipo}-${alerta.mensagem}`}>
                 <span>{alerta.mensagem}</span>
-                <AlertAction tipo={alerta.tipo} disabled={!podeEditar} />
+                <AlertAction
+                  tipo={alerta.tipo}
+                  disabled={!podeEditar}
+                  podeEncerrarObservacao={podeEditar && animal.observacaoAntirrabica != null}
+                  onEncerrarObservacao={onEncerrarObservacao}
+                />
               </li>
             ))}
           </ul>
@@ -34,7 +49,43 @@ export function AlertasFicha({ animal, podeEditar, incluiRevogacao }: { animal: 
   );
 }
 
-function AlertAction({ tipo, disabled }: { tipo: string; disabled: boolean }) {
+const ALERTAS_DE_VACINACAO = new Set([
+  "sem_vacinacao_registrada",
+  "esquema_vacinal_incompleto",
+  "dose_vencida",
+  "dose_a_vencer",
+  "vacina_obrigatoria_pendente",
+  "protocolo_vacinal_interrompido",
+  "reacao_adversa_em_acompanhamento",
+]);
+
+function AlertAction({
+  tipo,
+  disabled,
+  podeEncerrarObservacao,
+  onEncerrarObservacao,
+}: {
+  tipo: string;
+  disabled: boolean;
+  podeEncerrarObservacao: boolean;
+  onEncerrarObservacao: () => void;
+}) {
+  if (tipo === "observacao_antirrabica_vencida" || tipo === "observacao_antirrabica_em_curso") {
+    if (!podeEncerrarObservacao) return null;
+    return (
+      <Button type="button" variant="outline" onClick={onEncerrarObservacao}>
+        Encerrar observação
+      </Button>
+    );
+  }
+  if (ALERTAS_DE_VACINACAO.has(tipo)) {
+    return (
+      <Button asChild variant="outline">
+        <a href="#vacinacao-ficha">Ver vacinação</a>
+      </Button>
+    );
+  }
+
   let target = "";
   switch (tipo) {
     case "sem_baia":

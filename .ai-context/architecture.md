@@ -2,13 +2,13 @@
 
 ## System Summary
 
-Monorepo pnpm e Turborepo com `apps/web` (Next.js: login, casca do painel, Acessos, perfil, baias, animais e castrações) e `apps/api` (NestJS com auth JWT, usuários, baias, animais, castrações em rotas de animais e `GET /health`). Postgres local está no `compose.yaml`, com migrações Prisma `auth_core`, `gestao_baias`, `gestao_animais`, fotos relativas e castrações. O domínio de animais tem persistência, API, ocupação real integrada às baias, fotos locais com caminho relativo e telas de lista, cadastro em modal e ficha dedicada.
+Monorepo pnpm e Turborepo com `apps/web` (Next.js: login, casca do painel, Acessos, perfil, baias, animais, castrações, vacinação e dashboard) e `apps/api` (NestJS com auth JWT, usuários, baias, animais, castrações, vacinação, tutores, adoções, dashboard e `GET /health`). Postgres local está no `compose.yaml`, com migrações Prisma de autenticação, baias, animais, fotos, castrações, adoção e vacinação. O domínio de animais tem persistência, API, ocupação real integrada às baias, fotos locais com caminho relativo e telas de lista, cadastro em modal e ficha dedicada.
 
 ## Main Modules
 
-- `apps/web`: Next.js com tela de entrar, casca do painel, `/painel/acessos`, `/painel/perfil`, `/painel/baias`, `/painel/animais` com ficha `/painel/animais/[id]` e `/painel/castracoes`. Cliente HTTP em `src/lib/api.ts` (JWT em memória, refresh via cookie). Menu filtrado por papel em `src/lib/access.ts`.
-- `apps/api`: NestJS com módulos `auth`, `users`, `baias`, `animais`, `dashboard` e `prisma`. Baias oferece consulta, CRUD coordenado, ações operacionais e histórico. Animais oferece CRUD autenticado, raças, observações, pesagens, eventos simples, timeline, revogação terminal, galeria de fotos local e operações de castração. Dashboard oferece `GET /dashboard`, leitura agregada autenticada comum a todos os perfis. Escuta em `0.0.0.0` e `PORT` (padrão 3001). `GET /health` não consulta o banco. Seed de coordenação e de raças no boot (`src/seed.ts`).
-- `apps/api/prisma`: esquema e migrações de autenticação, baias, animais, fotos e castrações.
+- `apps/web`: Next.js com tela de entrar, casca do painel, `/painel/acessos`, `/painel/perfil`, `/painel/baias`, `/painel/animais` com ficha `/painel/animais/[id]`, `/painel/castracoes` e `/painel/vacinacao` (agenda) com `/painel/vacinacao/vacinas` (catálogo). Cliente HTTP em `src/lib/api.ts` (JWT em memória, refresh via cookie). Menu filtrado por papel em `src/lib/access.ts`.
+- `apps/api`: NestJS com módulos `auth`, `users`, `baias`, `animais`, `vacinacao`, `tutores`, `adocoes`, `dashboard` e `prisma`. Baias oferece consulta, CRUD coordenado, ações operacionais e histórico. Animais oferece CRUD autenticado, raças, observações, pesagens, eventos simples, timeline, revogação terminal, galeria de fotos local e operações de castração. Vacinação oferece catálogo, protocolos, aplicações e agenda. Dashboard oferece `GET /dashboard`, leitura agregada autenticada comum a todos os perfis. Escuta em `0.0.0.0` e `PORT` (padrão 3001). `GET /health` não consulta o banco. Seed de coordenação e de raças no boot (`src/seed.ts`).
+- `apps/api/prisma`: esquema e migrações de autenticação, baias, animais, fotos, castrações, adoção e vacinação.
 - `compose.yaml`: Postgres 17 local.
 - `tsconfig.base.json` e `eslint.config.mjs`: config compartilhada.
 
@@ -174,6 +174,34 @@ classDiagram
     Animal "1" --> "0..1" Adocao : passa
     Funcionario "1" --> "0..*" Prontuario : atende
 ```
+
+
+### Vacinação (implementada em 2026-09-25/26)
+
+Spec, plano e tarefas em `.ai-context/specs|plans|tasks/gestao-de-vacinacao.md`. Decisões em `decisions.md` (duas de 2026-09-25). O diagrama original põe `RegistroVacina` dentro de `Prontuario`; como o prontuário não existe no código, a aplicação liga direto ao `Animal` e `AplicacaoVacina.prontuarioId` fica nulo e reservado.
+
+**Modelos** (`apps/api/prisma/schema.prisma`, migrations `20260925210000` a `20260925230000`):
+
+- `Vacina`: catálogo com espécies, `totalDoses`, intervalo, revacinação, `diasAvisoProximaDose` (padrão 7, 0 desliga o aviso), idade mínima, `obrigatoria`, `ativa`. Nunca excluída. Seed idempotente só com a antirrábica (`seedVacinas`).
+- `ProtocoloVacinal`: par animal+vacina, único. Guarda a fotografia do esquema na criação, para as doses faltantes não mudarem quando o catálogo muda. Doses aplicadas, faltantes, próxima dose e data mínima são **derivadas** das aplicações não anuladas; só `status` é persistido (`interrompido` não é derivável).
+- `AplicacaoVacina`: dose aplicada. Datas civis em `@db.Date`. Nunca excluída nem editada em campo estrutural; correção é anulação motivada (`anuladaEm`). Marcações imutáveis: `aplicadaAdiantada` (com motivo e dias), `registroRetroativo`.
+- `AgendamentoVacinacao`: estados `agendado`, `aplicado`, `faltou`, `cancelado`. `atrasado` é derivado, não armazenado. O vínculo com a aplicação é só `aplicacaoId` (único); a aplicação lê o inverso.
+- `Animal.observacaoAntirrabicaInicioEm` e a situação `em_observacao_antirrabica` (período fixo de 10 dias corridos no código).
+- `EventoAnimal` ganhou `aplicacaoVacinaId`, `eventoOrigemId` (auto-relação), `gravidadeReacao` e `desfechoReacao`, mais 12 tipos de evento. Os enums `GravidadeReacaoAdversa` e `DesfechoReacaoAdversa` têm valores **propostos, sem aval clínico**.
+
+**Integridade no banco** (SQL escrito à mão na migration, porque Prisma não declara): dois índices únicos parciais (`aplicacoes_vacinas_dose_ativa_unica_idx` em `(protocoloId, numeroDose) WHERE anuladaEm IS NULL` e `agendamentos_vacinacao_aberto_unico_idx` em `(animalId, vacinaId) WHERE status = 'agendado'`) e 17 `CHECK`s. Regerar a migration com `migrate dev` perde os índices; os testes de concorrência denunciam.
+
+**API** (`apps/api/src/vacinacao/`, três services: `VacinasService`, `VacinacaoService`, `AgendaService`; `protocolo.ts` com o cálculo de próxima dose compartilhado com os alertas; `eventos.ts` com evento e auditoria compartilhados; `datas.ts` com datas civis):
+
+- `GET/POST/PATCH /vacinas`, `POST /vacinas/:id/inativar|reativar` (escrita só Coordenação; sem `DELETE`).
+- `GET /animais/:id/vacinacao`; `POST/PATCH /animais/:id/vacinacao/aplicacoes`; `POST .../aplicacoes/:id/anular` (só Coordenação); `POST .../protocolos/:id/interromper|retomar`; `GET /vacinacao/aplicacoes?lote=` (com reação adversa por aplicação).
+- `GET /vacinacao/agenda`, `GET|POST|PATCH /vacinacao/agendamentos`, `POST .../:id/cancelar|falta|baixa`. A baixa cria a aplicação e fecha o agendamento na mesma transação (`VacinacaoService.aplicarNaTransacao`).
+- `POST /animais/:id/encerrar-observacao-antirrabica` e reação adversa via `POST /animais/:id/eventos` com `tipo: "reacao_adversa"`, no módulo `animais`.
+- Toda recusa de regra de domínio é 409 com `codigo` estável. Consulta é livre para os quatro perfis; escrita é clínica (`coordenacao`, `veterinario`), exceto reação adversa e situação, que seguem a regra de eventos de animais.
+- Nove alertas entram em `alertas()` de `animais.service.ts` e no contador da listagem. `protocolosVacinais` e `eventos` são carregados só para calculá-los e não vão na resposta. Custo medido da listagem paginada: 9 ms para 20 ms por página de 20, por página e não pelo total.
+- "Hoje" é aferido em `America/Sao_Paulo` (`ZOOTECH_TIMEZONE`). Datas do animal (acolhimento, nascimento) são lidas como civis em UTC, porque o front as envia de `<input type="date">`.
+
+**Front** (`apps/web`): contrato em `src/lib/api.ts` (`ApiError` carrega `codigo` e `dados`); helpers `canViewVacinacao`, `canManageVacinacao`, `canManageCatalogoVacinas`, `canAnularAplicacaoVacina`, `canRegistrarReacaoAdversa` em `src/lib/access.ts`; `sectionRoles.vacinacao` passou de `clinico` para `todos`. Telas: `/painel/vacinacao` (agenda), `/painel/vacinacao/vacinas` (catálogo) e a seção `#vacinacao-ficha` na ficha do animal, com componentes em `src/components/vacinacao/`. O aviso de dose adiantada é calculado no cliente a partir de `dataMinimaProximaDose`, e a API o exige de novo (409 sem confirmação e motivo).
 
 ## Use Cases
 

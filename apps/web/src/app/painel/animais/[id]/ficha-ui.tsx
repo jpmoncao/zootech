@@ -17,6 +17,7 @@ export const especieLabel: Record<EspecieAnimal, string> = {
 export const situacaoLabel: Record<SituacaoAnimal, string> = {
   em_tratamento: "Em tratamento",
   em_quarentena_observacao: "Quarentena/observação",
+  em_observacao_antirrabica: "Observação antirrábica",
   saudavel: "Saudável",
   adotado: "Adotado",
   obito: "Óbito",

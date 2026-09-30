@@ -259,6 +259,65 @@
 
 **Consequences:** Clientes da API que enviarem imagem retangular recebem 400. A URL pública continua sendo a rota autenticada `/animais/:id/fotos/:fotoId/arquivo`.
 
+## 2026-09-25 — Vacinação é módulo próprio ligado ao animal, com agenda de agendamentos
+
+**Status:** Accepted
+
+**Context:** O sistema não tinha nenhum campo de vacinação. O animal chega da rua sem carteira e sem histórico, e o risco operacional é vacinar errado, vacinar duas vezes com a mesma vacina ou deixar o esquema de doses parar no meio. O diagrama de classes coloca `RegistroVacina` dentro de `Prontuario`, mas prontuário ainda não existe no código.
+
+**Decision:** Quatro escolhas confirmadas pelo autor em 2026-09-25:
+
+1. A aplicação de vacina fica ligada diretamente ao `Animal`, em módulo autônomo, com `prontuarioId` nulo e reservado para quando o prontuário existir. Não bloquear vacinação esperando prontuário.
+2. A agenda é agendamento real, com entidade `AgendamentoVacinacao` e estados `agendado`, `aplicado`, `faltou` e `cancelado`, mais remarcação. Não é só uma lista derivada de datas de próxima dose.
+3. O catálogo de vacinas não controla estoque. Vacina guarda nome, espécies aplicáveis, total de doses, intervalo entre doses e intervalo de revacinação. Lote e validade são texto e data informados na aplicação, apenas para rastreabilidade.
+4. Consultar vacinação é liberado a todos os perfis autenticados. Registrar, editar, agendar e operar é clínico (`coordenacao` e `veterinario`). Anular aplicação e manter o catálogo são exclusivos da `coordenacao`.
+
+Complementos assumidos e registrados na spec: `ProtocoloVacinal` por par animal e vacina guarda a fotografia do esquema no momento da criação, para as doses faltantes não mudarem quando o catálogo mudar; aplicação nunca é excluída nem tem campo estrutural editado, a correção é anulação motivada mais novo registro; a recusa por intervalo mínimo admite exceção clínica com motivo obrigatório, marcada no registro e na auditoria.
+
+**Rationale:** Ligar ao animal entrega o controle pedido sem arrastar o prontuário inteiro para este escopo. Agendamento real é o que dá o lembrete operacional na sala de vacina, que uma lista calculada não dá. Deixar estoque fora mantém o escopo entregável e coerente com o MVP sem integrações. A separação entre consulta ampla e escrita clínica repete o padrão já validado em baias.
+
+**Consequences:** Spec em `.ai-context/specs/gestao-de-vacinacao.md`. Modelos novos `Vacina`, `ProtocoloVacinal`, `AplicacaoVacina` e `AgendamentoVacinacao`; enums `StatusProtocoloVacinal` e `StatusAgendamentoVacinacao`; `TipoEventoAnimal` ganha os eventos de vacinação e de agenda. A migration precisa de dois índices únicos parciais em SQL, porque Prisma não os declara. `sectionRoles.vacinacao` em `apps/web/src/lib/access.ts` passa de `clinico` para `todos`, com a escrita restrita por `canManageVacinacao`. O item `vacinacao` de `nav.ts` é descomentado. Campanha de vacinação, estoque com saldo e reação adversa como entidade própria ficam fora e seguem como próximos passos. O catálogo inicial de vacinas é proposta e precisa do aval do veterinário responsável antes de virar seed.
+
+## 2026-09-25 — Perguntas abertas da vacinação resolvidas
+
+**Status:** Accepted
+
+**Context:** A spec de vacinação nasceu com sete perguntas abertas. O autor respondeu todas na mesma data. Três respostas mudaram mecanismo, não só configuração.
+
+**Decision:**
+
+1. **Catálogo inicial:** o seed entra somente com a antirrábica. As demais vacinas são cadastradas pela Coordenação na tela, porque doses, intervalos e idades mínimas são decisão clínica e não entram como dado semeado sem aval do veterinário responsável.
+2. **Janela de "dose a vencer":** configurável por vacina, em `Vacina.diasAvisoProximaDose`, com padrão 7 dias e valor 0 desligando o aviso antecipado. Esse campo não é fotografado no protocolo: mudar a janela muda o aviso de todos os animais daquela vacina na hora, porque é preferência de operação e não parte do esquema clínico.
+3. **Dose adiantada deixa de ser recusa e reenvio.** O sistema avisa **antes** de aplicar, com bloco inline no formulário que mostra a data da última dose, o intervalo previsto, a data a partir da qual a dose seria regular e os dias faltantes. A pessoa marca confirmação explícita e informa motivo; a decisão fica gravada na aplicação, no evento e na auditoria, com os dias de antecipação. A API continua recusando com 409 quando recebe aplicação adiantada sem o par confirmação mais motivo, porque não confia na interface. Para isso, a consulta do protocolo passa a devolver a data mínima da próxima dose, permitindo o aviso sem ida e volta ao servidor. Segue liberado a veterinário e Coordenação, sem restringir só ao veterinário.
+4. **Campanha de vacinação:** fora do escopo, confirmado.
+5. **Estoque com saldo de lote:** fora do MVP, confirmado.
+6. **Reação adversa pós-vacinal:** entra como evento da ficha do animal, junto de exame e diagnóstico, com `TipoEventoAnimal.reacao_adversa` e `EventoAnimal.aplicacaoVacinaId` como referência opcional à aplicação que a originou. Sem entidade nem fluxo próprio. Registrável por todos os perfis autenticados, coerente com a regra de eventos de animais, porque quem percebe a reação no canil costuma ser o agente. A consulta por lote informa presença de reação por aplicação.
+7. **Observação antirrábica:** `SituacaoAnimal` recebe `em_observacao_antirrabica`, coexistindo com `em_quarentena_observacao`. `Animal.observacaoAntirrabicaInicioEm` grava o início na entrada e é limpo na saída; recolocar o animal reinicia a contagem. Durante os 10 dias corridos, alerta informativo com dia decorrido sobre 10 e data de encerramento. Passados os 10 dias sem mudança de situação, o alerta vira pendência de ação e não expira sozinho.
+
+**Rationale:** Avisar antes de aplicar é o que resolve o problema real: quem está com a seringa na mão precisa decidir informado, não descobrir o bloqueio depois de enviar. Manter o motivo obrigatório preserva o valor do histórico, que era o propósito de gravar a decisão. Reação adversa como evento reaproveita um mecanismo que já existe e já é auditável, em vez de criar farmacovigilância inteira. A situação antirrábica separada da observação geral dá prazo e desfecho próprios ao protocolo de 10 dias, que hoje é controlado de cabeça.
+
+**Consequences:** Esta spec deixa de ser contida no módulo de vacinação. Ela altera gestão de animais em três pontos: lista de situações, eventos simples da ficha e seção de alertas. Pontos de código mapeados: `apps/api/prisma/schema.prisma:69`, os quatro DTOs em `apps/api/src/animais/dto/`, `apps/web/src/lib/api.ts:97` e `:293`, `apps/web/src/app/painel/animais/page.tsx:69` e `:93`, e `apps/web/src/app/painel/animais/[id]/page.tsx:93`, `:586` e `:1117`. Os selos de situação usam variantes Tailwind `data-[estado=...]` nos `className` dessas páginas, então o valor novo precisa de par de tokens próprio. A migration precisa isolar o `ALTER TYPE ... ADD VALUE` do enum de situação, que não roda dentro de bloco transacional em Postgres mais antigo. A lista de situações em `.ai-context/specs/gestao-de-animais.md` precisa ser atualizada quando isto for implementado. Cinco perguntas novas ficaram abertas, a mais relevante sendo se aplicar antirrábica em animal sob observação antirrábica deve ser bloqueado — a spec não bloqueia, por ser regra clínica.
+
+## 2026-09-25 — Reação adversa acompanhável e encerramento obrigatório da observação antirrábica
+
+**Status:** Accepted
+
+**Context:** As cinco perguntas que restaram da spec de vacinação foram respondidas no mesmo dia. Duas mudaram conteúdo; três confirmaram o que já estava escrito.
+
+**Decision:**
+
+1. **Bloquear antirrábica durante observação antirrábica: não.** Nenhuma situação do animal impede aplicar vacina. A spec nunca bloqueou; fica confirmado que não deve bloquear.
+2. **Os 10 dias são fixos no código.** Sem parâmetro de sistema e sem variação por animal.
+3. **Alerta da observação antirrábica:** durante o período, mostra **quantos dias faltam** para o fim, mais a data de encerramento, e no último dia diz "encerra hoje". Ao vencer, deixa de ser informativo e passa a pedir a observação final. A ação abre `Encerrar observação antirrábica`, um diálogo com dois campos obrigatórios: a observação final em texto e a nova situação do animal. Confirmar grava observação, mudança de situação, eventos e auditoria em uma transação, e limpa o início do período. Novo endpoint `POST /animais/:id/encerrar-observacao-antirrabica`, justificado por serem três escritas que precisam suceder juntas. Encerrar antes dos 10 dias é permitido pelo mesmo caminho e o evento registra que foi antecipado.
+4. **Reação adversa ganha gravidade e desfecho.** Gravidade obrigatória em `leve`, `moderada` e `grave`. Desfecho obrigatório em `em acompanhamento`, `resolvida`, `resolvida com sequela` e `óbito`, começando em `em acompanhamento`. Como o evento é imutável, a atualização de desfecho é **novo evento** `reacao_adversa` que referencia o original por `EventoAnimal.eventoOrigemId`, na mesma forma que `ObservacaoAnimal.observacaoOrigemId` já usa para correção. O desfecho corrente é o do evento mais recente da cadeia.
+5. **Indicador do painel conta o CCZ inteiro**, não só os animais de quem está logado.
+
+Assumido e registrado na spec, para a gravidade não virar dado morto: uma reação adversa com desfecho ainda `em acompanhamento` gera alerta próprio na ficha e na listagem; e ao preencher nova aplicação de uma vacina para a qual aquele animal já tem reação registrada, o formulário avisa antes do envio, com gravidade, desfecho e data. É aviso, nunca bloqueio, pelo mesmo princípio da aplicação adiantada. Desfecho `óbito` na reação não muda a situação do animal: a interface oferece o atalho, a mudança continua explícita e separada.
+
+**Rationale:** Cobrar a observação final ao vencer o prazo é o que faz o controle dos 10 dias valer como registro sanitário; um período que termina sem conclusão escrita não serve para nada depois. Atualizar desfecho por evento novo preserva a imutabilidade do histórico que o projeto já adota em toda parte, em vez de abrir exceção. Avisar na próxima aplicação é o que transforma gravidade em informação útil no momento da decisão, seguindo o padrão de "avise antes, não bloqueie" que o autor estabeleceu para a dose adiantada.
+
+**Consequences:** `EventoAnimal` passa a ter `aplicacaoVacinaId`, `eventoOrigemId` (auto-relação), `gravidadeReacao` e `desfechoReacao`. Enums novos `GravidadeReacaoAdversa` e `DesfechoReacaoAdversa`. `TipoEventoAnimal` ganha `reacao_adversa` e `encerramento_observacao_antirrabica`. Índices por `tipo` e `aplicacaoVacinaId` e por `eventoOrigemId`, para a cadeia de desfecho e o alerta não varrerem a tabela. Os alertas passam de oito para nove, e a spec tem 51 critérios de aceitação. Os valores dos dois enums novos são proposta deste documento e precisam do aval do veterinário responsável antes de ir ao banco, porque enum em Postgres é caro de alterar depois — mesma cautela já aplicada ao catálogo de vacinas. Todas as doze perguntas abertas estão resolvidas; nada bloqueia começar o plano técnico.
+
 ## 2026-09-26 — Situação `adotado` vinculada ao registro de adoção
 
 **Context:** A situação `adotado` já existe no cadastro de animais, mas o módulo de tutores e adoção ainda não existe. O CCZ precisa identificar a pessoa física que leva o animal e registrar seu aceite dos termos.

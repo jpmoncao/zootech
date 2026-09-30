@@ -260,7 +260,7 @@ function AnimalEditForm({
             value={form.situacao}
             disabled={disabled || saving}
             onValueChange={(value) => update("situacao", value as FormFicha["situacao"])}
-            options={(["em_tratamento", "em_quarentena_observacao", "saudavel", "obito"] as const).map((situacao) => ({ value: situacao, label: situacaoLabel[situacao] }))}
+            options={(["em_tratamento", "em_quarentena_observacao", "em_observacao_antirrabica", "saudavel", "obito"] as const).map((situacao) => ({ value: situacao, label: situacaoLabel[situacao] }))}
           />
         </Field>
         <Field label="Peso atual em kg" htmlFor="animal-edit-peso">
