@@ -106,6 +106,39 @@ function hasTime(value: string): boolean {
   return /t\d{2}:\d{2}/i.test(value);
 }
 
+const FUSO_ADOCAO = "America/Sao_Paulo";
+
+function partesLocais(data: Date) {
+  const partes = new Intl.DateTimeFormat("en-US", {
+    timeZone: FUSO_ADOCAO,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(data);
+  return Object.fromEntries(partes.filter((parte) => parte.type !== "literal").map((parte) => [parte.type, Number(parte.value)])) as Record<"year" | "month" | "day" | "hour", number>;
+}
+
+function inicioLocalUtc(data: string): Date {
+  const [ano, mes, dia] = data.split("-").map(Number);
+  const calendario = new Date(Date.UTC(ano, mes - 1, dia));
+  if (calendario.getUTCFullYear() !== ano || calendario.getUTCMonth() !== mes - 1 || calendario.getUTCDate() !== dia) {
+    throw new BadRequestException("Data de adoção inválida.");
+  }
+  const tratadoComoUtc = Date.UTC(ano, mes - 1, dia);
+  const localParts = partesLocais(new Date(tratadoComoUtc));
+  const localComoUtc = Date.UTC(localParts.year, localParts.month - 1, localParts.day, localParts.hour);
+  const offset = localComoUtc - tratadoComoUtc;
+  return new Date(tratadoComoUtc - offset);
+}
+
+function fimLocalUtc(data: string): Date {
+  const [ano, mes, dia] = data.split("-").map(Number);
+  const proximoDia = new Date(Date.UTC(ano, mes - 1, dia + 1));
+  return inicioLocalUtc(proximoDia.toISOString().slice(0, 10));
+}
+
 @Injectable()
 export class AnimaisService {
   private readonly mediaRoot: string;
@@ -125,6 +158,21 @@ export class AnimaisService {
   async listar(filtros: ListAnimaisDto) {
     const pagina = filtros.pagina ?? 1;
     const limite = filtros.limite ?? 20;
+    const adotadaDe = filtros.adotadaDe ? inicioLocalUtc(filtros.adotadaDe) : undefined;
+    const adotadaAte = filtros.adotadaAte ? inicioLocalUtc(filtros.adotadaAte) : undefined;
+    if (adotadaDe && adotadaAte && adotadaDe >= adotadaAte) {
+      throw new BadRequestException("O início do período de adoção deve ser anterior ao fim.");
+    }
+    const periodoAdocao = adotadaDe || adotadaAte
+      ? {
+        some: {
+          adotadaEm: {
+            ...(adotadaDe ? { gte: adotadaDe } : {}),
+            ...(filtros.adotadaAte ? { lt: fimLocalUtc(filtros.adotadaAte) } : {}),
+          },
+        },
+      }
+      : undefined;
     const where: Prisma.AnimalWhereInput = {
       ...(filtros.busca?.trim()
         ? {
@@ -139,6 +187,7 @@ export class AnimaisService {
       ...(filtros.porte ? { porte: filtros.porte } : {}),
       ...(filtros.baiaId ? { baiaId: filtros.baiaId } : {}),
       ...(filtros.semBaia ? { baiaId: null } : {}),
+      ...(periodoAdocao ? { adocoes: periodoAdocao } : {}),
       ...(filtros.situacao
         ? { situacao: filtros.situacao }
         : filtros.incluirTerminais

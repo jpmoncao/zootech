@@ -279,7 +279,7 @@
   ],
   "narrative": {
     "northStar": "A Parede Petróleo",
-    "overview": "ZooTech é identidade de serviço público sanitário, não de vitrine nem de loja de pet. A parede verde-petróleo do login e a lateral do painel são a mesma matéria: autoridade quieta, contraste alto, zero hero de métricas. O miolo opera em névoa e branco; o posto do turno é o centro do painel, não um dashboard de KPIs.\n\nA tipografia carrega a hierarquia: Bricolage Grotesque só nos títulos e na marca, Figtree na interface operacional, IBM Plex Mono no CPF, na matrícula e em identificadores. O escudo âmbar é marcador provisório — não brasão municipal, não acento de UI.",
+    "overview": "ZooTech é identidade de serviço público sanitário, não de vitrine nem de loja de pet. A parede verde-petróleo do login e a lateral do painel são a mesma matéria: autoridade quieta e contraste alto. O miolo opera em névoa e branco; o painel operacional reúne indicadores em grupos de leitura com rótulos e contexto.\n\nA tipografia carrega a hierarquia: Bricolage Grotesque só nos títulos e na marca, Figtree na interface operacional, IBM Plex Mono no CPF, na matrícula e em identificadores. O escudo âmbar é marcador provisório — não brasão municipal, não acento de UI.",
     "keyCharacteristics": [
       "Parede petróleo contínua do login (metade da viewport) ao menu (216 px)",
       "Âmbar restrito ao escudo provisório inline SVG",
@@ -309,7 +309,7 @@
       },
       {
         "name": "The Wall Continuity Rule",
-        "body": "A mesma parede petróleo do login vira o menu de 216 px; o miolo do painel é o posto, não um hero de métricas.",
+        "body": "A mesma parede petróleo do login vira o menu de 216 px; os indicadores do painel ficam em superfícies claras, agrupados por assunto.",
         "section": "layout"
       },
       {
